@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.4.1"
+var version = "0.4.2"
 
 func main() {
 if len(os.Args) < 2 {
@@ -494,10 +494,10 @@ var drivers = map[string]driverConfig{
 	},
 	"crush": {
 		binary:   "crush",
-		buildCmd: func(p string) []string { return []string{"-p", p, "-q"} },
+		buildCmd: func(p string) []string { return []string{"run", "--quiet", p} },
 		interactive: []string{},
 		hasHooks:    true,
-		initHint:    "agentguard crush-init",
+		initHint:    "",
 	},
 }
 
