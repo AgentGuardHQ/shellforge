@@ -221,13 +221,87 @@ echo -e "  ${BOLD}OpenShell${NC} — NVIDIA kernel sandbox (Landlock + Seccomp)"
 if command -v openshell &>/dev/null; then
   ok "OpenShell installed"
 else
-  ans=$(ask "Install OpenShell? (kernel-level agent sandboxing)" "n")
-  if [[ "$ans" == "y" ]]; then
-    info "Clone and build from https://github.com/NVIDIA/OpenShell"
-    info "  git clone https://github.com/NVIDIA/OpenShell && cd OpenShell && make install"
-    warn "Manual install required — see link above"
+  if [[ "$(uname)" == "Darwin" ]]; then
+    info "OpenShell requires a Linux kernel (Landlock + Seccomp)."
+    info "On macOS, it runs inside a Linux VM via Docker or Colima."
+    echo ""
+
+    # Check for Docker or Colima
+    LINUX_VM=""
+    if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+      ok "Docker detected — Linux VM available"
+      LINUX_VM="docker"
+    elif command -v colima &>/dev/null; then
+      ok "Colima detected — Linux VM available"
+      LINUX_VM="colima"
+    elif command -v lima &>/dev/null; then
+      ok "Lima detected — Linux VM available"
+      LINUX_VM="lima"
+    fi
+
+    if [[ -z "$LINUX_VM" ]]; then
+      ans=$(ask "Install a Linux VM for OpenShell? (Docker or Colima)" "y")
+      if [[ "$ans" == "y" ]]; then
+        echo ""
+        echo "  Choose a Linux VM runtime:"
+        echo "    1) Docker Desktop (recommended — most compatible)"
+        echo "    2) Colima (lightweight, CLI-only, uses Lima)"
+        read -rp "  Choose [1/2]: " vm_choice
+        case "${vm_choice:-1}" in
+          2)
+            info "Installing Colima..."
+            brew install colima docker
+            colima start --cpu 2 --memory 4
+            ok "Colima running (Linux VM with kernel sandbox support)"
+            LINUX_VM="colima"
+            ;;
+          *)
+            info "Install Docker Desktop from: https://www.docker.com/products/docker-desktop/"
+            info "After install, restart this script."
+            warn "Docker Desktop needs manual download — see link above"
+            ;;
+        esac
+      fi
+    fi
+
+    if [[ -n "$LINUX_VM" ]]; then
+      ans=$(ask "Install OpenShell inside Linux VM?" "y")
+      if [[ "$ans" == "y" ]]; then
+        info "Pulling OpenShell container..."
+        docker pull nvidia/openshell:latest 2>/dev/null || {
+          info "Building OpenShell from source..."
+          docker run --rm -v "$(pwd)":/workspace -w /workspace ubuntu:22.04 bash -c             "apt-get update -qq && apt-get install -y -qq git make gcc >/dev/null 2>&1 &&              git clone --depth 1 https://github.com/NVIDIA/OpenShell /tmp/openshell 2>/dev/null &&              cd /tmp/openshell && make 2>/dev/null && cp openshell /workspace/.openshell-linux" 2>/dev/null
+        }
+        if [[ -f .openshell-linux ]]; then
+          ok "OpenShell built (Linux binary at .openshell-linux)"
+          info "Run sandboxed agents: docker run --rm -v \$(pwd):/workspace openshell ..."
+        else
+          ok "OpenShell container available via Docker"
+        fi
+      fi
+    else
+      warn "Skipped — no Linux VM. Install Docker or Colima to enable."
+    fi
+
   else
-    warn "Skipped — agents run without kernel isolation"
+    # Native Linux
+    ans=$(ask "Install OpenShell? (kernel-level agent sandboxing)" "n")
+    if [[ "$ans" == "y" ]]; then
+      if [[ "$(uname -r | cut -d. -f1-2)" < "5.13" ]]; then
+        warn "Kernel $(uname -r) — Landlock needs >= 5.13"
+      fi
+      info "Installing OpenShell..."
+      git clone --depth 1 https://github.com/NVIDIA/OpenShell /tmp/openshell 2>/dev/null
+      cd /tmp/openshell && make && sudo make install
+      cd - >/dev/null
+      if command -v openshell &>/dev/null; then
+        ok "OpenShell installed"
+      else
+        warn "OpenShell build failed — check errors above"
+      fi
+    else
+      warn "Skipped — agents run without kernel isolation"
+    fi
   fi
 fi
 
@@ -236,10 +310,26 @@ echo -e "  ${BOLD}DefenseClaw${NC} — Cisco supply chain scanner"
 if command -v defenseclaw &>/dev/null; then
   ok "DefenseClaw installed"
 else
-  ans=$(ask "Install DefenseClaw? (scan skills and MCP servers)" "n")
+  ans=$(ask "Install DefenseClaw? (scan agent skills and MCP servers)" "n")
   if [[ "$ans" == "y" ]]; then
-    info "Install from https://github.com/cisco/defenseclaw"
-    warn "Manual install required — see link above"
+    if command -v pip3 &>/dev/null; then
+      info "Attempting pip install..."
+      pip3 install defenseclaw 2>/dev/null && ok "DefenseClaw installed" || {
+        info "Not on pip — building from source..."
+        git clone --depth 1 https://github.com/cisco/defenseclaw /tmp/defenseclaw 2>/dev/null
+        if [[ -f /tmp/defenseclaw/Makefile ]]; then
+          cd /tmp/defenseclaw && make && sudo make install
+          cd - >/dev/null
+          ok "DefenseClaw installed"
+        else
+          info "Install from: https://github.com/cisco/defenseclaw"
+          warn "Manual install required — see link above"
+        fi
+      }
+    else
+      info "Install from: https://github.com/cisco/defenseclaw"
+      warn "Manual install required — see link above"
+    fi
   else
     warn "Skipped — no supply chain scanning"
   fi
