@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.3.6"
+var version = "0.4.0"
 
 func main() {
 if len(os.Args) < 2 {
@@ -116,8 +116,18 @@ reader := bufio.NewReader(os.Stdin)
 steps := 0
 total := 6
 
-// ── Step 1: Ollama ──
+// ── Detect environment ──
+isServer := !hasGPU() && runtime.GOOS == "linux"
+model := ""
+
+// ── Step 1: Ollama (skip on headless server) ──
 steps++
+if isServer {
+fmt.Printf("── Step %d/%d: Ollama (skipped — server mode) ──\n", steps, total)
+fmt.Println("  Detected: Linux, no GPU — skipping local model setup")
+fmt.Println("  Use CLI drivers instead: shellforge run claude, copilot, codex, gemini")
+fmt.Println()
+} else {
 fmt.Printf("── Step %d/%d: Ollama (local LLM inference) ──\n", steps, total)
 if _, err := exec.LookPath("ollama"); err != nil {
 fmt.Print("  Ollama not found. Install? [Y/n] ")
@@ -157,7 +167,7 @@ fmt.Println("    4) phi4         — 9 GB RAM, Microsoft")
 fmt.Println("    5) other       — enter a custom model name")
 fmt.Print("  Pick model [2]: ")
 choice := readLine(reader)
-model := "qwen3:8b"
+model = "qwen3:8b"
 switch strings.TrimSpace(choice) {
 case "1":
 model = "qwen3:1.7b"
@@ -177,11 +187,11 @@ fmt.Printf("  → Pulling %s (this may take a few minutes)...\n", model)
 run("ollama", "pull", model)
 fmt.Printf("  ✓ Model ready: %s\n", model)
 
-// Set env hint
 if model != ollama.Model {
 fmt.Printf("  Note: set OLLAMA_MODEL=%s before running shellforge\n", model)
 }
 fmt.Println()
+}
 
 // ── Step 2: Governance ──
 steps++
@@ -257,32 +267,52 @@ fmt.Println()
 // ── Step 5: Agent drivers ──
 steps++
 fmt.Printf("── Step %d/%d: Agent drivers ──\n", steps, total)
-driverList := []struct {
+
+// On Mac: offer Crush (local models). On server: skip Crush, show API drivers.
+if !isServer {
+if _, err := exec.LookPath("crush"); err != nil {
+fmt.Println("  Crush — Go AI coding agent with AgentGuard governance (local models)")
+fmt.Print("  Install Crush? [Y/n] ")
+if confirm(reader) {
+fmt.Println("  → Installing Crush (AgentGuardHQ fork with governance)...")
+run("go", "install", "github.com/AgentGuardHQ/crush@latest")
+if _, err := exec.LookPath("crush"); err == nil {
+fmt.Println("  ✓ Crush installed with AgentGuard governance built in")
+} else {
+fmt.Println("  ⚠ Install failed — try: go install github.com/AgentGuardHQ/crush@latest")
+}
+}
+} else {
+fmt.Println("  ✓ Crush installed (local model driver)")
+}
+}
+
+// Show API-based drivers
+apiDrivers := []struct {
 name    string
 bin     string
 install string
-desc    string
 }{
-{"Crush", "crush", "brew install charmbracelet/tap/crush", "Go AI coding agent (local models)"},
-{"Claude Code", "claude", "npm i -g @anthropic-ai/claude-code", "Anthropic Claude CLI"},
-{"Copilot CLI", "github-copilot-cli", "gh extension install github/gh-copilot", "GitHub Copilot"},
-{"Codex CLI", "codex", "npm i -g @openai/codex", "OpenAI Codex"},
-{"Gemini CLI", "gemini", "npm i -g @anthropic-ai/gemini-cli", "Google Gemini"},
+{"Claude Code", "claude", "npm i -g @anthropic-ai/claude-code"},
+{"Copilot CLI", "github-copilot-cli", "gh extension install github/gh-copilot"},
+{"Codex CLI", "codex", "npm i -g @openai/codex"},
+{"Gemini CLI", "gemini", "npm i -g @google/gemini-cli"},
 }
+fmt.Println()
+fmt.Println("  API-based drivers (use their own model APIs):")
 installedDrivers := 0
-for _, d := range driverList {
+for _, d := range apiDrivers {
 if _, err := exec.LookPath(d.bin); err == nil {
-fmt.Printf("  ✓ %s installed (%s)\n", d.name, d.desc)
+fmt.Printf("  ✓ %s installed\n", d.name)
 installedDrivers++
 } else {
-fmt.Printf("  ○ %s not found\n", d.name)
-fmt.Printf("    → %s\n", d.install)
+fmt.Printf("  ○ %s → %s\n", d.name, d.install)
 }
 }
-if installedDrivers == 0 {
+if isServer && installedDrivers == 0 {
 fmt.Println()
-fmt.Println("  No drivers installed. ShellForge's built-in agent still works.")
-fmt.Println("  Install drivers to use: shellforge run claude \"prompt\"")
+fmt.Println("  ⚠ No drivers installed. Install at least one:")
+fmt.Println("    npm i -g @anthropic-ai/claude-code")
 }
 fmt.Println()
 
@@ -329,16 +359,28 @@ fmt.Println("╔═════════════════════�
 fmt.Println("║     Setup Complete                   ║")
 fmt.Println("╚══════════════════════════════════════╝")
 fmt.Println()
-fmt.Println("  Quick start:")
-fmt.Printf("    shellforge agent \"describe this project\"")
-fmt.Println()
+if isServer {
+fmt.Println("  Server mode — use CLI drivers:")
+fmt.Println("    shellforge run claude \"review open PRs\"")
+fmt.Println("    shellforge run copilot \"update docs\"")
+fmt.Println("    shellforge run codex \"generate tests\"")
 fmt.Println()
 fmt.Println("  Run a swarm:")
-fmt.Println("    dagu server --dags=./dags         # web UI at :8080")
-fmt.Println("    dagu start dags/sdlc-swarm.yaml   # run now")
+fmt.Println("    shellforge swarm                      # start Dagu dashboard")
+fmt.Println("    dagu start dags/multi-driver-swarm.yaml")
+} else {
+fmt.Println("  Quick start:")
+fmt.Println("    shellforge agent \"describe this project\"")
+fmt.Println("    shellforge run crush \"find test gaps\"")
 fmt.Println()
-fmt.Printf("  Tip: export OLLAMA_MODEL=%s\n", model)
+fmt.Println("  Run a swarm:")
+fmt.Println("    shellforge swarm                      # start Dagu dashboard")
+fmt.Println("    dagu start dags/sdlc-swarm.yaml")
+if model != "" {
+fmt.Printf("\n  Tip: export OLLAMA_MODEL=%s\n", model)
+}
 fmt.Println("  Tip: export OLLAMA_KV_CACHE_TYPE=q8_0   # halves memory per agent")
+}
 fmt.Println()
 }
 
@@ -787,4 +829,20 @@ cmd := exec.Command(name, args...)
 cmd.Stdout = os.Stdout
 cmd.Stderr = os.Stderr
 cmd.Run()
+}
+
+// hasGPU detects if the machine has a GPU (Metal on macOS, NVIDIA on Linux).
+func hasGPU() bool {
+if runtime.GOOS == "darwin" {
+return true // All Macs have Metal GPU
+}
+// Linux: check for NVIDIA GPU
+if _, err := exec.LookPath("nvidia-smi"); err == nil {
+return true
+}
+// Check for render devices (AMD/Intel)
+if _, err := os.Stat("/dev/dri/renderD128"); err == nil {
+return true
+}
+return false
 }
