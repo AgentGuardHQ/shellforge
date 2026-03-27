@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.3.1"
+var version = "0.3.2"
 
 func main() {
 if len(os.Args) < 2 {
@@ -293,7 +293,17 @@ if _, err := exec.LookPath("defenseclaw"); err != nil {
 fmt.Print("  DefenseClaw (supply chain scanner)? [y/N] ")
 input := readLine(reader)
 if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input)), "y") {
-fmt.Println("  → Install from: https://github.com/cisco-ai-defense/defenseclaw")
+fmt.Println("  → Installing DefenseClaw...")
+if runtime.GOOS == "darwin" {
+run("pip3", "install", "defenseclaw")
+} else {
+run("pip3", "install", "defenseclaw")
+}
+if _, err := exec.LookPath("defenseclaw"); err == nil {
+fmt.Println("  ✓ DefenseClaw installed")
+} else {
+fmt.Println("  ⚠ Install failed — try manually: pip3 install defenseclaw")
+}
 } else {
 fmt.Println("  Skipped")
 }
@@ -307,9 +317,23 @@ fmt.Print("  Docker/OpenShell (sandbox isolation)? [y/N] ")
 input := readLine(reader)
 if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input)), "y") {
 if runtime.GOOS == "darwin" {
-fmt.Println("  → brew install colima docker && colima start")
+fmt.Println("  → Installing Colima + Docker...")
+run("brew", "install", "colima", "docker")
+fmt.Println("  → Starting Colima...")
+run("colima", "start")
+if _, err := exec.LookPath("docker"); err == nil {
+fmt.Println("  ✓ Docker ready (OpenShell compatible)")
 } else {
-fmt.Println("  → Install Docker: https://docs.docker.com/engine/install/")
+fmt.Println("  ⚠ Docker not available after install — check Colima status")
+}
+} else {
+fmt.Println("  → Installing Docker...")
+run("sh", "-c", "curl -fsSL https://get.docker.com | sh")
+if _, err := exec.LookPath("docker"); err == nil {
+fmt.Println("  ✓ Docker installed")
+} else {
+fmt.Println("  ⚠ Install failed — try: https://docs.docker.com/engine/install/")
+}
 }
 } else {
 fmt.Println("  Skipped")
