@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.4.4"
+var version = "0.4.5"
 
 func main() {
 if len(os.Args) < 2 {
@@ -275,12 +275,37 @@ fmt.Println("  Crush — Go AI coding agent with AgentGuard governance (local mo
 fmt.Print("  Install Crush? [Y/n] ")
 if confirm(reader) {
 fmt.Println("  → Installing Crush (AgentGuardHQ fork with governance)...")
-run("go", "install", "github.com/AgentGuardHQ/crush@latest")
-if _, err := exec.LookPath("crush"); err == nil {
-fmt.Println("  ✓ Crush installed with AgentGuard governance built in")
+// Clone, build, and install our governed fork
+crushDir := filepath.Join(os.TempDir(), "shellforge-crush-install")
+os.RemoveAll(crushDir)
+run("git", "clone", "--depth", "1", "https://github.com/AgentGuardHQ/crush.git", crushDir)
+buildCmd := exec.Command("go", "build", "-o", "crush", ".")
+buildCmd.Dir = crushDir
+buildCmd.Stdout = os.Stdout
+buildCmd.Stderr = os.Stderr
+if err := buildCmd.Run(); err != nil {
+fmt.Printf("  ⚠ Build failed: %s\n", err)
+fmt.Println("    Requires Go 1.22+. Check: go version")
 } else {
-fmt.Println("  ⚠ Install failed — try: go install github.com/AgentGuardHQ/crush@latest")
+// Move binary to a location in PATH
+crushBin := filepath.Join(crushDir, "crush")
+gobin := os.Getenv("GOBIN")
+if gobin == "" {
+gobin = filepath.Join(os.Getenv("HOME"), "go", "bin")
 }
+os.MkdirAll(gobin, 0o755)
+dest := filepath.Join(gobin, "crush")
+if data, err := os.ReadFile(crushBin); err == nil {
+if err := os.WriteFile(dest, data, 0o755); err == nil {
+fmt.Printf("  ✓ Crush installed to %s\n", dest)
+fmt.Println("  ✓ AgentGuard governance built in")
+} else {
+fmt.Printf("  ⚠ Could not install to %s: %s\n", dest, err)
+fmt.Printf("    Try: sudo cp %s /usr/local/bin/crush\n", crushBin)
+}
+}
+}
+os.RemoveAll(crushDir)
 }
 } else {
 fmt.Println("  ✓ Crush installed (local model driver)")
