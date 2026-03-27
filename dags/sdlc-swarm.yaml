@@ -1,0 +1,34 @@
+# sdlc-swarm.yaml — Daily SDLC agent swarm
+# Runs QA, reporting, and security agents on a schedule.
+# Each step is governed by ShellForge (agentguard.yaml).
+#
+# Install Dagu: brew install dagu (Mac) or curl -sL https://dagu.sh | sh (Linux)
+# Run: dagu start dags/sdlc-swarm.yaml
+# Dashboard: http://localhost:8080
+
+schedule: "0 9 * * *"  # 9am daily
+
+params:
+  - REPO_DIR: .
+  - SHELLFORGE: shellforge
+
+steps:
+  - name: qa-analysis
+    command: ${SHELLFORGE} agent "Analyze the source code for test gaps, missing error handling, and code quality issues. Use read_file and list_files to examine the codebase. Produce a structured report with findings and recommendations."
+    dir: ${REPO_DIR}
+    output: QA_RESULT
+
+  - name: security-scan
+    command: ${SHELLFORGE} agent "Check this repository for security issues: exposed secrets in git history, insecure dependencies, hardcoded credentials, and misconfigured permissions. Use run_shell to check git log and list_files to find sensitive files."
+    dir: ${REPO_DIR}
+    depends:
+      - qa-analysis
+    output: SECURITY_RESULT
+
+  - name: daily-report
+    command: ${SHELLFORGE} agent "Generate a daily status report. Summarize: 1) Recent git commits (use run_shell for git log --oneline -20), 2) QA findings from the previous step, 3) Security scan results. Output as markdown."
+    dir: ${REPO_DIR}
+    depends:
+      - qa-analysis
+      - security-scan
+    output: REPORT
