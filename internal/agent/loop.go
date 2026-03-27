@@ -13,11 +13,13 @@ import (
 "encoding/json"
 "fmt"
 "regexp"
-"strings"
 "time"
 
+"github.com/AgentGuardHQ/shellforge/internal/action"
+"github.com/AgentGuardHQ/shellforge/internal/correction"
 "github.com/AgentGuardHQ/shellforge/internal/governance"
 "github.com/AgentGuardHQ/shellforge/internal/logger"
+"github.com/AgentGuardHQ/shellforge/internal/normalizer"
 "github.com/AgentGuardHQ/shellforge/internal/ollama"
 "github.com/AgentGuardHQ/shellforge/internal/tools"
 )
@@ -56,6 +58,11 @@ start := time.Now()
 logger.Init(cfg.OutputDir, cfg.Agent)
 defer logger.Close()
 
+// Orchestrator integration: generate run identity and correction engine.
+runID := fmt.Sprintf("run_%d", time.Now().UnixMilli())
+var seq int
+corrector := correction.NewEngine(3, 10) // 3 retries per action, 10 total budget
+
 systemPrompt := buildSystemPrompt(cfg.System)
 messages := []ollama.ChatMessage{
 {Role: "system", Content: systemPrompt},
@@ -65,7 +72,7 @@ messages := []ollama.ChatMessage{
 result := &RunResult{}
 var log []string
 
-logger.Agent(cfg.Agent, fmt.Sprintf("starting — max %d turns, model: %s", cfg.MaxTurns, cfg.Model))
+logger.Agent(cfg.Agent, fmt.Sprintf("starting — max %d turns, model: %s, run: %s", cfg.MaxTurns, cfg.Model, runID))
 
 for turn := 1; turn <= cfg.MaxTurns; turn++ {
 elapsed := time.Since(start).Milliseconds()
@@ -104,11 +111,71 @@ break
 }
 
 result.ToolCalls++
-toolResult := tools.Execute(engine, cfg.Agent, toolCall.Tool, toolCall.Params)
+seq++
 
-if !toolResult.Success && strings.HasPrefix(toolResult.Output, "DENIED") {
-result.Denials++
+// ── Normalizer: convert raw tool call to Canonical Action Representation ──
+proposal := normalizer.Normalize(runID, seq, cfg.Agent, toolCall.Tool, toolCall.Params)
+fp := normalizer.Fingerprint(proposal)
+
+// ── Correction engine: check if this action should be retried or skipped ──
+canAttempt, skipReason := corrector.ShouldCorrect(fp)
+if !canAttempt {
+// Too many retries or in lockdown — skip this action entirely.
+logger.Agent(cfg.Agent, fmt.Sprintf("action skipped: %s", skipReason))
+messages = append(messages, ollama.ChatMessage{
+Role:    "user",
+Content: fmt.Sprintf("Tool %q was skipped: %s. Try a different approach.", toolCall.Tool, skipReason),
+})
+summary := fmt.Sprintf("[turn %d] %s → skipped (%s)", turn, toolCall.Tool, skipReason)
+log = append(log, summary)
+continue
 }
+
+// ── Governance evaluation (existing) ──
+decision := engine.Evaluate(toolCall.Tool, toolCall.Params)
+
+if !decision.Allowed {
+result.Denials++
+
+// Map governance.Decision to action.GovernanceDecision for the correction engine.
+govDecision := action.GovernanceDecision{
+Allowed:  false,
+Decision: "deny",
+Reason:   decision.Reason,
+Rule:     decision.PolicyName,
+}
+
+// Record denial and attempt correction.
+corrector.RecordDenial(fp, govDecision)
+logger.Governance(cfg.Agent, toolCall.Tool, toolCall.Params, decision.Allowed, decision.PolicyName, decision.Reason)
+
+canCorrect, _ := corrector.ShouldCorrect(fp)
+if canCorrect {
+// Build corrective feedback and feed it back to the LLM.
+feedback := corrector.BuildFeedback(proposal, govDecision)
+logger.Agent(cfg.Agent, fmt.Sprintf("governance denied %q — sending correction feedback (escalation: %s)", toolCall.Tool, corrector.Level()))
+messages = append(messages, ollama.ChatMessage{
+Role:    "user",
+Content: feedback,
+})
+} else {
+// Exhausted retries — skip and inform the LLM.
+logger.Agent(cfg.Agent, fmt.Sprintf("governance denied %q — no retries left, skipping", toolCall.Tool))
+messages = append(messages, ollama.ChatMessage{
+Role:    "user",
+Content: fmt.Sprintf("Tool %q was denied and cannot be retried. Move on to a different approach.", toolCall.Tool),
+})
+}
+
+summary := fmt.Sprintf("[turn %d] %s → denied (%s)", turn, toolCall.Tool, decision.PolicyName)
+log = append(log, summary)
+continue
+}
+
+// ── Governance allowed: log and execute tool ──
+logger.Governance(cfg.Agent, toolCall.Tool, toolCall.Params, decision.Allowed, decision.PolicyName, decision.Reason)
+toolResult := tools.ExecuteDirect(toolCall.Tool, toolCall.Params, engine.GetTimeout())
+logger.ToolResult(cfg.Agent, toolCall.Tool, toolResult.Success, toolResult.Output)
 
 var msg string
 if toolResult.Success {
@@ -196,7 +263,7 @@ Available tools:
 ## Rules
 - Use ONE tool per response. Wait for the result before calling another.
 - When done, respond normally WITHOUT a tool call — that is your final answer.
-- If governance denies a tool call, do NOT retry it.
+- If governance denies a tool call, do NOT retry the same action — try an alternative.
 - Keep tool usage focused and minimal.`
 }
 

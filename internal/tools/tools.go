@@ -69,6 +69,16 @@ Params: []Param{
 },
 }
 
+// ExecuteDirect runs a tool implementation without governance evaluation.
+// Use this when governance has already been checked by the caller (e.g., the agent loop).
+func ExecuteDirect(tool string, params map[string]string, timeoutSec int) Result {
+	impl, ok := impls[tool]
+	if !ok {
+		return Result{Success: false, Output: "Unknown tool: " + tool, Error: "unknown_tool"}
+	}
+	return impl(params, timeoutSec)
+}
+
 // Execute runs a tool call through governance, then executes if allowed.
 func Execute(engine *governance.Engine, agent, tool string, params map[string]string) Result {
 decision := engine.Evaluate(tool, params)
