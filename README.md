@@ -21,23 +21,29 @@
 
 ## Quick Start
 
+### Install via Homebrew (macOS / Linux)
+
 ```bash
-# 1. Clone
+brew tap AgentGuardHQ/tap
+brew install shellforge
+
+shellforge setup                 # pulls Ollama + model + verifies stack
+shellforge status                # verify 8/8 integrations ✓
+shellforge qa                    # run the QA agent
+```
+
+### Install from source
+
+```bash
 git clone https://github.com/AgentGuardHQ/shellforge.git
 cd shellforge
 
-# 2. Install ecosystem (interactive — pick your layers)
-bash scripts/setup.sh --all      # everything
-# OR  bash scripts/setup.sh           # interactive picker
-# OR  bash scripts/setup.sh --minimal # core only (Go + Ollama)
-
-# 3. Build & run
+bash scripts/setup.sh --all     # install full 8-layer ecosystem
 go build -o shellforge ./cmd/shellforge/
-./shellforge status              # verify 8/8 integrations ✓
-./shellforge qa                  # run the QA agent
+./shellforge status
 ```
 
-**Requirements:** macOS (Apple Silicon) or Linux · Go 1.18+ · ~1.3 GB RAM (1.7B model)
+**Requirements:** macOS (Apple Silicon/Intel) or Linux · ~1.3 GB RAM (1.7B model)
 
 ---
 
