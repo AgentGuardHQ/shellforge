@@ -59,6 +59,14 @@ func NewRunState(runID, task string, maxRetries int) *RunState {
 	}
 }
 
+// NewRun creates a RunState with an auto-generated ID and default settings.
+// This is a convenience constructor for callers that do not need to control
+// the run ID or retry budget.
+func NewRun(task string) *RunState {
+	runID := fmt.Sprintf("run_%d", time.Now().UnixMilli())
+	return NewRunState(runID, task, 3)
+}
+
 // Transition moves the run to a new phase if the transition is valid.
 // Returns an error for invalid transitions, preventing illegal state changes.
 func (s *RunState) Transition(to Phase) error {
