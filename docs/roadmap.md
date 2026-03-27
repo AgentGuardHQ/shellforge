@@ -1,48 +1,54 @@
 # Roadmap
 
-## Phase 1 — Foundation (current)
+## Phase 1 — Foundation ✅
 - [x] Ollama integration with low-context wrapper
 - [x] 3 simple agents (QA, report, prototype)
 - [x] AgentGuard governance policy (monitor mode)
 - [x] Script-based execution with cron support
 - [x] Memory optimization placeholder
 
-## Phase 2 — Hardening
-- [ ] Switch agentguard.yaml to `enforce` mode
-- [ ] Add AgentGuard CLI hooks to run-agent.sh (`agentguard pre/post`)
-- [ ] Token budget tracking per agent per day
-- [ ] Output quality scoring (simple heuristics)
-- [ ] Error recovery and retry logic
+## Phase 2 — Hardening ✅
+- [x] Go rewrite — single static binary (~7.5MB), zero Node.js dependencies
+- [x] Switch agentguard.yaml to `enforce` mode
+- [x] AgentGuard CLI hooks integrated into governance engine
+- [x] Token budget tracking per agent per day
+- [x] Output quality scoring (simple heuristics)
+- [x] Error recovery and retry logic
 
-## Phase 3 — Framework Integration
-- [ ] **DeepAgents** — multi-step planning for complex tasks
-  - Wire `adapters/deepagents.ts` to real SDK
-  - Route via `agent-config.ts` framework field
+## Phase 3 — Framework Integration ✅
+- [x] **OpenCode** — Go CLI AI coding framework
+  - Pluggable engine interface (`internal/engine/`)
+  - `--non-interactive` subprocess mode, governance-wrapped
+  - Tool-use governance via AgentGuard policy engine
+- [x] **DeepAgents** — multi-agent orchestration (LangChain-based)
+  - Subprocess engine adapter (`internal/engine/`)
   - Agent decomposition: break goals into sub-tasks
-- [ ] **OpenCode** — interactive coding agent
-  - Wire `adapters/opencode.ts` to real SDK
-  - Tool-use governance via AgentGuard hooks
-  - Sandbox file writes to `outputs/` only
+  - Governance-wrapped tool calls
 
-## Phase 4 — Memory & Context
-- [ ] **Google memory library** integration
-  - Swap `config/memory.ts` stubs with real implementation
-  - Rolling context window with summarization
-  - Cross-session memory persistence
-- [ ] Prompt caching for repeated patterns
-- [ ] RAG over local codebase (lightweight)
+## Phase 4 — Memory & Context ✅
+- [x] **RTK v0.31.0** — token compression integrated
+  - Auto-wraps shell output and LLM I/O
+  - Reduces context window usage by ~40%
+- [x] **TurboQuant** — model quantization + KV cache optimization
+  - PyTorch MPS backend on Apple Silicon
+  - Integrated via `internal/integration/`
+- [x] Prompt caching for repeated patterns
 
-## Phase 5 — Security
-- [ ] **NVIDIA OpenShell** sandbox integration
+## Phase 5 — Security ✅
+- [x] **NVIDIA OpenShell** sandbox integration
   - Landlock + Seccomp isolation per agent run
-  - Compile agentguard.yaml → OpenShell policy
-  - See: AgentGuardHQ/agentguard#1036
-- [ ] **Cisco DefenseClaw** scanning
+  - Docker/Colima on Mac for Linux kernel features
+  - Integrated via `internal/integration/`
+- [x] **Cisco DefenseClaw** scanning
+  - AI Bill of Materials (BoM) scanner
   - Scan agent skills/plugins pre-install
-  - MCP server verification
+  - Integrated via `internal/integration/`
 
-## Phase 6 — Scale
+## Phase 6 — Scale 🔄 In Progress
+- [x] Interactive setup CLI (`shellforge setup`)
+- [x] Ecosystem health check (`shellforge status`)
+- [ ] Binary releases (goreleaser, GitHub Releases)
 - [ ] Multi-model routing (qwen for fast, mistral for quality)
-- [ ] Agent-to-agent communication (simple file-based)
+- [ ] Cross-platform support (Linux arm64, Windows)
 - [ ] Cloud telemetry integration (AgentGuard Cloud)
 - [ ] Dashboard for local swarm observability
