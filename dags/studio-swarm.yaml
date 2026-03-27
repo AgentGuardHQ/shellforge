@@ -1,0 +1,38 @@
+# studio-swarm.yaml — AgentGuard Studio project swarm
+# Continuous development agents for Studio projects.
+# Customize the REPO_DIR and prompts for each project.
+#
+# Run: dagu start dags/studio-swarm.yaml
+# Schedule: runs every 4 hours by default
+
+schedule: "0 */4 * * *"
+
+params:
+  - REPO_DIR: .
+  - SHELLFORGE: shellforge
+
+steps:
+  - name: check-issues
+    command: ${SHELLFORGE} agent "Check for open GitHub issues in this repo. Use run_shell with 'gh issue list --state open --limit 10'. Summarize the top priority issues."
+    dir: ${REPO_DIR}
+    output: ISSUES
+
+  - name: run-tests
+    command: ${SHELLFORGE} agent "Run the project's test suite. Use run_shell to detect the test command (go test, npm test, pytest, etc.) and run it. Report pass/fail counts and any failures."
+    dir: ${REPO_DIR}
+    output: TEST_RESULTS
+
+  - name: check-deps
+    command: ${SHELLFORGE} agent "Check for outdated dependencies. Use run_shell to run the appropriate command (go list -m -u all, npm outdated, pip list --outdated). Report any that need updating."
+    dir: ${REPO_DIR}
+    depends:
+      - run-tests
+    output: DEP_STATUS
+
+  - name: generate-report
+    command: ${SHELLFORGE} agent "Generate a project health report combining: open issues, test results, and dependency status. Format as markdown with sections for each area. Include a health score (healthy/warning/critical)."
+    dir: ${REPO_DIR}
+    depends:
+      - check-issues
+      - run-tests
+      - check-deps

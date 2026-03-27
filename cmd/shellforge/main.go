@@ -47,6 +47,8 @@ fmt.Fprintln(os.Stderr, "Usage: shellforge agent \"your prompt\"")
 os.Exit(1)
 }
 cmdAgent(strings.Join(os.Args[2:], " "))
+case "swarm":
+cmdSwarm()
 case "serve":
 configPath := "agents.yaml"
 if len(os.Args) > 2 {
@@ -80,10 +82,11 @@ Usage:
   shellforge scan [dir]            DefenseClaw supply chain scan
   shellforge version               Print version
 
-  shellforge serve [config]       Daemon mode — run scheduled agent swarm
+  shellforge serve [config]       Simple daemon mode (built-in scheduler)
+  shellforge swarm                Setup Dagu orchestration (DAG workflows + web UI)
 
 Governance:  agentguard.yaml — every tool call evaluated before execution.
-Stack:       Ollama · AgentGuard · RTK
+Stack:       Ollama · AgentGuard · Dagu · RTK
 
 `, version)
 }
@@ -246,6 +249,78 @@ os.Exit(1)
 }
 printResult("prototype-agent", result)
 saveReport("outputs/logs", "prototype", result)
+}
+
+func cmdSwarm() {
+fmt.Println("=== ShellForge Swarm Setup (Dagu) ===")
+fmt.Println()
+
+// Check if Dagu is installed
+if _, err := exec.LookPath("dagu"); err != nil {
+fmt.Println("Dagu is not installed. Install it:")
+fmt.Println()
+if runtime.GOOS == "darwin" {
+fmt.Println("  brew install dagu")
+} else {
+fmt.Println("  curl -sL https://raw.githubusercontent.com/dagu-org/dagu/main/scripts/installer.sh | bash")
+}
+fmt.Println()
+fmt.Println("Then run 'shellforge swarm' again.")
+return
+}
+fmt.Println("✓ Dagu installed")
+
+// Check for dags directory
+if _, err := os.Stat("dags"); os.IsNotExist(err) {
+fmt.Println("→ Creating dags/ directory with example workflows...")
+os.MkdirAll("dags", 0o755)
+
+// Write SDLC swarm DAG
+sdlcDAG := `# sdlc-swarm.yaml — Daily SDLC agent swarm
+schedule: "0 9 * * *"
+
+steps:
+  - name: qa-analysis
+    command: shellforge agent "Analyze source code for test gaps and quality issues. Use read_file and list_files. Produce a structured report."
+
+  - name: security-scan
+    command: shellforge agent "Check for exposed secrets, insecure dependencies, and misconfigurations."
+    depends:
+      - qa-analysis
+
+  - name: daily-report
+    command: shellforge agent "Generate a daily status report from git log and previous agent findings."
+    depends:
+      - qa-analysis
+      - security-scan
+`
+os.WriteFile("dags/sdlc-swarm.yaml", []byte(sdlcDAG), 0o644)
+fmt.Println("  ✓ dags/sdlc-swarm.yaml (QA → security → report)")
+} else {
+fmt.Println("✓ dags/ directory exists")
+// Count DAGs
+entries, _ := filepath.Glob("dags/*.yaml")
+fmt.Printf("  %d DAG(s) found\n", len(entries))
+}
+
+// Check for governance
+configPath := findGovernanceConfig()
+if configPath == "" {
+fmt.Println("⚠ No agentguard.yaml — run 'shellforge setup' first")
+} else {
+fmt.Println("✓ Governance config found")
+}
+
+fmt.Println()
+fmt.Println("Start the swarm:")
+fmt.Println()
+fmt.Println("  dagu server --dags=./dags")
+fmt.Println()
+fmt.Println("Then open http://localhost:8080 for the dashboard.")
+fmt.Println()
+fmt.Println("Run a DAG now:")
+fmt.Println()
+fmt.Println("  dagu start dags/sdlc-swarm.yaml")
 }
 
 func cmdServe(configPath string) {
