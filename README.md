@@ -118,7 +118,9 @@ shellforge status
 | `shellforge agent "prompt"` | Run a governed agent — every tool call checked |
 | `shellforge qa [dir]` | QA analysis — find test gaps and issues |
 | `shellforge report [repo]` | Generate a status report from git + logs |
-| `shellforge serve agents.yaml` | Daemon mode — run a 24/7 agent swarm |
+| `shellforge swarm` | Set up Dagu orchestration — DAG workflows + web UI |
+| `shellforge serve [config]` | Daemon mode — run a 24/7 agent swarm |
+| `shellforge scan [dir]` | DefenseClaw supply chain scan |
 | `shellforge status` | Show ecosystem health |
 | `shellforge version` | Print version |
 

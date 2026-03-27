@@ -61,10 +61,13 @@
 
 Production-grade local-first multi-agent orchestration with governance at every boundary.
 
-### Phase 7.1 — Foundation 🔄 In Progress
+### Phase 7.1 — Foundation ✅
 - [x] `ActionProposal` and `ActionResult` core types (`internal/action/types.go`)
 - [x] `InferenceQueue` with semaphore-based concurrency (`internal/scheduler/queue.go`)
 - [x] Orchestrator state machine with valid transitions (`internal/orchestrator/state.go`)
+- [x] Normalizer — converts tool calls to Canonical Action Representations (`internal/normalizer/normalizer.go`)
+- [x] Correction engine — denial tracking, escalation levels, corrective feedback (`internal/correction/engine.go`)
+- [x] Intent parser — format-agnostic action extraction from ANY LLM output (`internal/intent/parser.go`)
 - [ ] Single-agent orchestrator with governance boundary
 - [ ] Wire orchestrator into `shellforge run`
 

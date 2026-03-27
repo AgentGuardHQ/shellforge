@@ -436,7 +436,7 @@
         <span class="output">✓ Model ready: qwen3:1.7b</span><br>
         <span class="output">=== ShellForge Setup Complete ===</span><br>
         <br>
-        <span class="prompt">$</span> <span class="cmd">./shellforge qa</span><br>
+        <span class="prompt">$</span> <span class="cmd">shellforge qa</span><br>
         <span class="output">[🛡️ AgentGuard] Loading governance policy...</span><br>
         <span class="output">[🛡️ AgentGuard] Mode: enforce | Rules: 5</span><br>
         <span class="output">[🦙 Ollama] Connected to localhost:11434</span><br>
@@ -445,14 +445,14 @@
         <span class="output">[🛡️ AgentGuard] policy: <span class="red">DENY</span>  | tool: run_shell | target: rm -rf /</span><br>
         <span class="accent">[✅ QA] Analysis complete — 3 issues found, 0 critical</span><br>
         <br>
-        <span class="prompt">$</span> <span class="cmd">./shellforge agent <span class="blue">"build a REST health endpoint"</span></span><br>
+        <span class="prompt">$</span> <span class="cmd">shellforge agent <span class="blue">"build a REST health endpoint"</span></span><br>
         <span class="output">[🛡️ AgentGuard] Loading governance policy...</span><br>
         <span class="output">[🛡️ AgentGuard] Mode: enforce | Rules: 5</span><br>
         <span class="output">[🦙 Ollama] Connected to localhost:11434</span><br>
         <span class="output">[🤖 ShellForge] Starting agent loop...</span><br>
         <span class="output">[🔧 Tool] read_file → src/main.go (2.1KB)</span><br>
         <span class="output">[🛡️ AgentGuard] policy: allow | tool: read_file</span><br>
-        <span class="output">[🔧 Tool] run_shell → go test ./...</span><br>
+        <span class="output">[🔧 Tool] run_shell → go test ...</span><br>
         <span class="output">[🛡️ AgentGuard] policy: allow | tool: run_shell</span><br>
         <span class="accent">[✅ Agent] Task complete — 2 files modified, all tests pass</span>
       </div>
@@ -580,19 +580,19 @@
       <tbody>
         <tr>
           <td><strong>qa</strong></td>
-          <td><code>./shellforge qa</code></td>
+          <td><code>shellforge qa</code></td>
           <td>Test suggestions + findings</td>
           <td><span class="tag tag-green">analysis</span></td>
         </tr>
         <tr>
           <td><strong>report</strong></td>
-          <td><code>./shellforge report</code></td>
+          <td><code>shellforge report</code></td>
           <td>Markdown status report</td>
           <td><span class="tag tag-blue">reporting</span></td>
         </tr>
         <tr>
           <td><strong>agent</strong></td>
-          <td><code>./shellforge agent</code></td>
+          <td><code>shellforge agent</code></td>
           <td>Code generation + task execution</td>
           <td><span class="tag tag-purple">generation</span></td>
         </tr>
