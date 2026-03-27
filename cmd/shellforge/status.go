@@ -111,33 +111,29 @@ func cmdStatusFull() {
 		fmt.Println("    → npm i -g @anthropic/rtk")
 	}
 
-	// ── OpenShell ──
+	// ── Docker / Sandbox ──
 	total++
-	fmt.Println("\n🔒 OpenShell (sandbox)")
-	if _, err := exec.LookPath("openshell"); err == nil {
+	fmt.Println("\n🔒 Docker (sandbox)")
+	if _, err := exec.LookPath("docker"); err == nil {
 		healthy++
-		fmt.Println("  ✓ installed (kernel-level isolation)")
+		fmt.Println("  ✓ Docker available (sandbox-ready)")
 	} else {
-		dockerOk := false
-		if _, err := exec.LookPath("docker"); err == nil {
-			dockerOk = true
-		}
-		if dockerOk {
-			fmt.Println("  ○ not installed, but Docker available (partial sandbox)")
+		fmt.Println("  ○ not installed (optional)")
+		if isdarwin() {
+			fmt.Println("    → brew install colima docker")
 		} else {
-			fmt.Println("  ○ not installed (optional)")
+			fmt.Println("    → curl -fsSL https://get.docker.com | sh")
 		}
-		fmt.Println("    → https://github.com/NVIDIA/OpenShell")
 	}
 
 	// ── DefenseClaw ──
-	total++
 	fmt.Println("\n🐾 DefenseClaw (supply chain scanner)")
 	if _, err := exec.LookPath("defenseclaw"); err == nil {
+		total++
 		healthy++
 		fmt.Println("  ✓ installed")
 	} else {
-		fmt.Println("  ○ not installed (optional)")
+		fmt.Println("  ○ not yet publicly available (Cisco AI Defense)")
 		fmt.Println("    → https://github.com/cisco-ai-defense/defenseclaw")
 	}
 

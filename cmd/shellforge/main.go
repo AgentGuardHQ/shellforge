@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.3.2"
+var version = "0.3.3"
 
 func main() {
 if len(os.Args) < 2 {
@@ -286,34 +286,13 @@ fmt.Println("  Install drivers to use: shellforge run claude \"prompt\"")
 }
 fmt.Println()
 
-// ── Step 6: Optional security tools ──
+// ── Step 6: Docker sandbox (optional) ──
 steps++
-fmt.Printf("── Step %d/%d: Security tools (optional) ──\n", steps, total)
-if _, err := exec.LookPath("defenseclaw"); err != nil {
-fmt.Print("  DefenseClaw (supply chain scanner)? [y/N] ")
-input := readLine(reader)
-if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input)), "y") {
-fmt.Println("  → Installing DefenseClaw...")
-if runtime.GOOS == "darwin" {
-run("pip3", "install", "defenseclaw")
-} else {
-run("pip3", "install", "defenseclaw")
-}
-if _, err := exec.LookPath("defenseclaw"); err == nil {
-fmt.Println("  ✓ DefenseClaw installed")
-} else {
-fmt.Println("  ⚠ Install failed — try manually: pip3 install defenseclaw")
-}
-} else {
-fmt.Println("  Skipped")
-}
-} else {
-fmt.Println("  ✓ DefenseClaw installed")
-}
+fmt.Printf("── Step %d/%d: Docker sandbox (optional) ──\n", steps, total)
 if _, err := exec.LookPath("docker"); err == nil {
-fmt.Println("  ✓ Docker available (OpenShell sandbox compatible)")
+fmt.Println("  ✓ Docker available (sandbox-ready)")
 } else {
-fmt.Print("  Docker/OpenShell (sandbox isolation)? [y/N] ")
+fmt.Print("  Docker (for sandboxed agent execution)? [y/N] ")
 input := readLine(reader)
 if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input)), "y") {
 if runtime.GOOS == "darwin" {
@@ -322,9 +301,9 @@ run("brew", "install", "colima", "docker")
 fmt.Println("  → Starting Colima...")
 run("colima", "start")
 if _, err := exec.LookPath("docker"); err == nil {
-fmt.Println("  ✓ Docker ready (OpenShell compatible)")
+fmt.Println("  ✓ Docker ready")
 } else {
-fmt.Println("  ⚠ Docker not available after install — check Colima status")
+fmt.Println("  ⚠ Docker not available after install — check: colima status")
 }
 } else {
 fmt.Println("  → Installing Docker...")
