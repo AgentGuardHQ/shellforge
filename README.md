@@ -22,16 +22,15 @@
 ## Quick Start
 
 ```bash
-# 1. Clone
+# Option A — Homebrew (easiest)
+brew tap AgentGuardHQ/tap
+brew install shellforge
+shellforge status                # verify 8/8 integrations ✓
+
+# Option B — Build from source
 git clone https://github.com/AgentGuardHQ/shellforge.git
 cd shellforge
-
-# 2. Install ecosystem (interactive — pick your layers)
-bash scripts/setup.sh --all      # everything
-# OR  bash scripts/setup.sh           # interactive picker
-# OR  bash scripts/setup.sh --minimal # core only (Go + Ollama)
-
-# 3. Build & run
+bash scripts/setup.sh --all      # install ecosystem (interactive)
 go build -o shellforge ./cmd/shellforge/
 ./shellforge status              # verify 8/8 integrations ✓
 ./shellforge qa                  # run the QA agent
@@ -89,7 +88,7 @@ Check integration health at any time:
 | `./shellforge qa` | Run the QA agent (test gap analysis) |
 | `./shellforge report` | Run the report agent (markdown summary) |
 | `./shellforge agent` | Run a custom agent with a prompt |
-| `./shellforge scan` | Run security scan via DefenseClaw |
+| `./shellforge scan [dir]` | Run security scan via DefenseClaw |
 | `./shellforge setup` | Interactive setup wizard |
 | `./shellforge version` | Show version |
 

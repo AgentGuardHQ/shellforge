@@ -51,6 +51,9 @@ toolTagRe   = regexp.MustCompile("(?s)<tool>(.*?)</tool>")
 bareJSONRe  = regexp.MustCompile(`\{[^{}]*"tool"\s*:\s*"[^"]+"\s*,\s*"params"\s*:\s*\{[^}]*\}[^{}]*\}`)
 )
 
+// RunLoop runs the native agentic loop: it sends the user prompt to Ollama,
+// parses tool calls from the response, routes each through governance, executes
+// allowed tools, and feeds results back until the task completes or limits are hit.
 func RunLoop(cfg LoopConfig, engine *governance.Engine) (*RunResult, error) {
 start := time.Now()
 logger.Init(cfg.OutputDir, cfg.Agent)

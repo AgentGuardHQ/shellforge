@@ -82,3 +82,23 @@ All 8 layers run on Mac M4:
 - TurboQuant runs via PyTorch (MPS backend)
 - OpenShell runs inside Docker/Colima (Linux VM for Landlock)
 - DefenseClaw installs via pip or source build
+
+## Release Pipeline
+
+ShellForge uses [goreleaser](https://goreleaser.com) for reproducible cross-platform builds.
+
+```
+.goreleaser.yaml
+├── Builds: darwin/amd64, darwin/arm64, linux/amd64, linux/arm64
+├── Archives: tar.gz with checksums
+└── Homebrew: AgentGuardHQ/homebrew-tap (Formula/shellforge.rb)
+```
+
+**To cut a release:**
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+# GitHub Actions runs goreleaser, publishes to GitHub Releases + Homebrew tap
+```
+
+**ldflags:** `-s -w -X main.version={{.Version}}` — strips debug symbols, injects version.

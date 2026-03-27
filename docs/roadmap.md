@@ -47,8 +47,12 @@
 ## Phase 6 — Scale 🔄 In Progress
 - [x] Interactive setup CLI (`shellforge setup`)
 - [x] Ecosystem health check (`shellforge status`)
-- [ ] Binary releases (goreleaser, GitHub Releases)
-- [ ] Multi-model routing (qwen for fast, mistral for quality)
-- [ ] Cross-platform support (Linux arm64, Windows)
+- [x] Binary releases (goreleaser + Homebrew tap — merged in #22; tag v0.2.0 to cut first release)
+
+## Phase 7 — Deep Integration Research 🔬
+- [ ] **RTK deeper integration** — benchmark actual token savings end-to-end; consider wiring into the LLM I/O layer not just shell output ([issue #11](https://github.com/AgentGuardHQ/shellforge/issues/11))
+- [ ] **TurboQuant KV cache** — investigate native Ollama/llama.cpp support; current integration wraps the Python module but the real win is kernel-level KV quantization ([issue #10](https://github.com/AgentGuardHQ/shellforge/issues/10))
+- [ ] Multi-model routing (qwen for fast tasks, mistral for quality-critical work)
+- [ ] Cross-platform support (Linux arm64, Windows amd64)
 - [ ] Cloud telemetry integration (AgentGuard Cloud)
 - [ ] Dashboard for local swarm observability

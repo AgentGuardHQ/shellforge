@@ -57,6 +57,8 @@ PromptEval    int    `json:"prompt_eval_count"`
 EvalCount     int    `json:"eval_count"`
 }
 
+// Chat sends a multi-turn chat request to Ollama and returns the response.
+// Uses the default model if model is empty.
 func Chat(messages []ChatMessage, model string) (*ChatResponse, error) {
 if model == "" {
 model = Model
@@ -93,6 +95,8 @@ return nil, fmt.Errorf("decode chat response: %w", err)
 return &result, nil
 }
 
+// Generate sends a single-turn completion request to Ollama.
+// Uses the default model if model is empty.
 func Generate(prompt, system, model string) (*GenerateResponse, error) {
 if model == "" {
 model = Model
@@ -130,6 +134,7 @@ return nil, fmt.Errorf("decode generate response: %w", err)
 return &result, nil
 }
 
+// IsRunning returns true if the Ollama HTTP server is reachable.
 func IsRunning() bool {
 client := &http.Client{Timeout: 2 * time.Second}
 resp, err := client.Get(Host + "/api/tags")
@@ -140,6 +145,8 @@ resp.Body.Close()
 return resp.StatusCode == http.StatusOK
 }
 
+// ListModels returns the names of all models loaded in Ollama.
+// Returns an empty slice (not an error) if Ollama is unreachable.
 func ListModels() ([]string, error) {
 client := &http.Client{Timeout: 5 * time.Second}
 resp, err := client.Get(Host + "/api/tags")

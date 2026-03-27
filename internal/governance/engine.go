@@ -47,6 +47,8 @@ Mode     string
 Policies []Policy
 }
 
+// NewEngine loads and parses an agentguard.yaml governance config.
+// Defaults to "monitor" mode if the mode field is absent.
 func NewEngine(configPath string) (*Engine, error) {
 data, err := os.ReadFile(configPath)
 if err != nil {
@@ -69,6 +71,8 @@ Policies: cfg.Policies,
 }, nil
 }
 
+// Evaluate checks a proposed tool call against all governance policies.
+// In enforce mode, deny policies block execution; in monitor mode they log but allow.
 func (e *Engine) Evaluate(tool string, params map[string]string) Decision {
 for _, p := range e.Policies {
 if e.matches(p, tool, params) {
@@ -98,6 +102,8 @@ Mode:       e.Mode,
 }
 }
 
+// GetTimeout returns the per-run timeout in seconds from the first policy
+// that defines one, or 300 seconds as a safe default.
 func (e *Engine) GetTimeout() int {
 for _, p := range e.Policies {
 if p.Timeout > 0 {
