@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.3.3"
+var version = "0.3.4"
 
 func main() {
 if len(os.Args) < 2 {

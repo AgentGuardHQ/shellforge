@@ -150,6 +150,15 @@ func runShell(params map[string]string, timeoutSec int) Result {
 }
 func listFiles(params map[string]string, _ int) Result {
 dir := params["directory"]
+if dir == "" {
+dir = params["path"]
+}
+if dir == "" {
+dir = params["dir"]
+}
+if dir == "" {
+dir = "."
+}
 ext := params["extension"]
 var files []string
 err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -189,6 +198,15 @@ return Result{Success: true, Output: strings.Join(files, "\n")}
 func searchFiles(params map[string]string, _ int) Result {
 pattern := strings.ReplaceAll(params["pattern"], `"`, `\"`)
 dir := params["directory"]
+if dir == "" {
+dir = params["path"]
+}
+if dir == "" {
+dir = params["dir"]
+}
+if dir == "" {
+dir = "."
+}
 cmd := exec.Command("grep", "-rn", "--include=*.ts", "--include=*.js", "--include=*.py", "--include=*.go", "--include=*.md", pattern, dir)
 out, _ := cmd.Output()
 output := strings.TrimSpace(string(out))
