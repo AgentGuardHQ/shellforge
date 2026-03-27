@@ -19,7 +19,7 @@ import (
 "github.com/AgentGuardHQ/shellforge/internal/scheduler"
 )
 
-var version = "0.4.6"
+var version = "0.4.7"
 
 func main() {
 if len(os.Args) < 2 {
@@ -275,6 +275,19 @@ fmt.Println("  Crush — Go AI coding agent with AgentGuard governance (local mo
 fmt.Print("  Install Crush? [Y/n] ")
 if confirm(reader) {
 fmt.Println("  → Installing Crush (AgentGuardHQ fork with governance)...")
+// Ensure Go is installed (needed to build Crush)
+if _, err := exec.LookPath("go"); err != nil {
+fmt.Println("  → Go not found — installing...")
+if runtime.GOOS == "darwin" {
+run("brew", "install", "go")
+} else {
+run("sh", "-c", "curl -fsSL https://go.dev/dl/go1.23.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xz && sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go")
+}
+if _, err := exec.LookPath("go"); err != nil {
+fmt.Println("  ⚠ Go install failed. Install manually: brew install go")
+fmt.Println("    Then re-run: shellforge setup")
+}
+}
 // Clone, build, and install our governed fork
 crushDir := filepath.Join(os.TempDir(), "shellforge-crush-install")
 os.RemoveAll(crushDir)
