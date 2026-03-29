@@ -1,51 +1,51 @@
 # ShellForge Squad — Blockers
 
-**Updated:** 2026-03-29T10:00Z
+**Updated:** 2026-03-29T18:00Z
 **Reported by:** EM run (claude-code:opus:shellforge:em)
 
 ---
 
-## P0 — Active Blockers (3)
+## P0 — Active Blockers (0)
 
-### #58 — bounded-execution policy denies ALL run_shell calls in enforce mode
-**Severity:** Critical — enforcement mode is non-functional
-**Impact:** Any agent running under `bounded-execution` policy cannot execute shell commands at all. Blocks dogfood run (#76) and makes core governance a no-op in production.
-**Assignee:** qa-agent (analysis) — needs dev-agent for fix
-**URL:** https://github.com/AgentGuardHQ/shellforge/issues/58
+All 3 P0 governance security bugs are fixed in PR #83 (pending CI + merge).
+
+See PR: https://github.com/AgentGuardHQ/shellforge/pull/83
 
 ---
 
-### #62 — cmdEvaluate silently ignores JSON unmarshal error — governance bypass
-**Severity:** Critical — security hole (fail-open pattern)
-**Impact:** Malformed JSON payload causes silent error swallow — governance bypassed entirely. Go zero-value semantics: unpopulated struct → deny=false → allow. Exploitable by adversarial agent.
-**Assignee:** security-scanner (analysis) — needs dev-agent for fix
-**URL:** https://github.com/AgentGuardHQ/shellforge/issues/62
+## P1 — Remaining Work
+
+### #68 — Zero test coverage across all packages
+**Severity:** High — governance runtime with no tests is unshipable
+**Impact:** Can't validate fix correctness, no regression protection. Blocks dogfood credibility.
+**Assignee:** qa-agent
+**URL:** https://github.com/AgentGuardHQ/shellforge/issues/68
+
+### #63 — classifyShellRisk prefix matching too broad
+**Severity:** High — false read-only classification on commands starting with `cat`/`ls`/`echo`
+**Assignee:** qa-agent
+**URL:** https://github.com/AgentGuardHQ/shellforge/issues/63
+
+### #74 — Stale crush references in main.go
+**Severity:** Low-medium — cosmetic but misleading; crush→goose migration was v0.6
+**URL:** https://github.com/AgentGuardHQ/shellforge/issues/74
 
 ---
 
-### #75 — govern-shell.sh: unescaped $COMMAND in printf silently defaults to allow
-**Severity:** Critical — security hole in shell governance hook
-**Impact:** Command strings with printf format specifiers (`%s`, `%n`) corrupt JSON payload; hook silently defaults to `allow`. Exploitable via shell-level injection.
-**Assignee:** security-scanner (analysis) — needs dev-agent for fix
-**URL:** https://github.com/AgentGuardHQ/shellforge/issues/75
-**Fix:** Use `printf '%s'` quoting or switch to `jq -n --arg` for JSON construction.
+## Resolved This Run
 
----
-
-## Capability Gap — No Dev Agent in Swarm
-
-**Added:** 2026-03-29T10:00Z
-**Severity:** High — limits squad's ability to ship fixes autonomously
-
-Current agents (qa-agent, security-scanner, report-agent) produce analysis only — no agent can write code or open PRs. PR budget is 0/3 (fully available), meaning capacity exists for 3 parallel fix PRs but no agent to author them.
-
-**Action needed:** Add `dev-agent` to agents.yaml, or dispatch feature-dev agent manually for P0 fixes.
+- **#58** — bounded-execution wildcard policy matched every run_shell → `engine.go` fix merged in PR #83
+- **#62** — cmdEvaluate fail-open on JSON unmarshal → fail-closed fix in PR #83
+- **#75** — govern-shell.sh printf injection → jq --arg fix in PR #83
+- **#67** — govern-shell.sh fragile sed output parsing → jq fix in PR #83
+- **#69** — rm policy only blocked -rf/-fr, not plain rm → policy broadened in PR #83
+- **#59** — misleading `# Mode: monitor` comment with `mode: enforce` → fixed in PR #83
 
 ---
 
 ## Notes
 
-- PR budget: 0/3 open — capacity available to fix all three P0s in parallel once dev-agent exists
-- No retry loops or blast radius concerns this run
-- Dogfood run (#76, P2) is hard-blocked until at minimum #58 is resolved
-- #77 triaged as P3 research this run — not urgent vs P0 security correctness
+- PR budget: 1/3 open — capacity for 2 more fix PRs
+- No retry loops or blast radius concerns
+- Dogfood run (#76) unblocked once PR #83 merges
+- Test coverage (#68) is now the most pressing remaining gap — no regression safety net
