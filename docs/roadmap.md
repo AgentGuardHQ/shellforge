@@ -72,6 +72,27 @@ Foundation types exist (`internal/action/`, `internal/orchestrator/`, `internal/
 
 ## Planned
 
+### Phase 7.5 — Octi Pulpo Integration + Browser Drivers
+
+ShellForge orchestrates, Octi Pulpo coordinates, AgentGuard governs. This phase wires the three together.
+
+#### 7.5.1 — Octi Pulpo Coordination
+- [ ] Consume Octi Pulpo MCP tools (route_recommend, coord_claim, coord_signal)
+- [ ] Budget-aware driver selection — query Octi Pulpo before choosing model/driver
+- [ ] Duplicate work prevention via coord_claim (prevents agent stampedes)
+- [ ] Driver health signals — broadcast ShellForge agent status to Octi Pulpo
+
+#### 7.5.2 — OpenClaw / NemoClaw Browser Driver
+- [ ] OpenClaw as execution runtime for browser-based agents
+- [ ] NemoClaw as optional adapter (never a dependency — protect kernel independence)
+- [ ] Browser driver support in `shellforge run` (alongside Goose, Claude Code, Copilot, Codex, Gemini)
+- [ ] Governed browser actions through AgentGuard kernel
+
+#### 7.5.3 — Ecosystem Wiring
+- [ ] ShellForge agents auto-connect to Octi Pulpo MCP server on startup
+- [ ] Shared memory across ShellForge-managed agents via Octi Pulpo memory_store/recall
+- [ ] Model routing delegation — ShellForge defers to Octi Pulpo route_recommend
+
 ### Phase 8 — AgentGuard MCP Server
 - [ ] MCP server exposing governed tools
 - [ ] Goose → MCP → AgentGuard → execute
