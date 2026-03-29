@@ -1,14 +1,14 @@
 {
   "squad": "shellforge",
-  "updated_at": "2026-03-29T19:30:00Z",
+  "updated_at": "2026-03-29T20:00:00Z",
   "sprint": {
     "goal": "Harden enforcement runtime — fix all P0/P1 governance bugs before dogfood run",
     "focus": "Security correctness: govern-shell.sh JSON safety, cmdEvaluate bypass, bounded-execution policy, test coverage baseline"
   },
   "pr_budget": {
     "max_open": 3,
-    "current_open": 2,
-    "status": "green"
+    "current_open": 3,
+    "status": "at-limit"
   },
   "loop_guard": {
     "retry_loop_detected": false,
@@ -59,9 +59,17 @@
       "number": 84,
       "title": "fix(docs): update stale Crush comments in cmdEvaluate (#74)",
       "status": "open",
-      "ci": "pending",
-      "review_status": "pending",
+      "ci": "passing (5/5)",
+      "review_status": "REVIEW_REQUIRED — awaiting human approval (cannot self-approve)",
       "issues_closed": [74]
+    },
+    {
+      "number": 85,
+      "title": "chore(squad): EM state update — run 4 (2026-03-29)",
+      "status": "open",
+      "ci": "passing (5/5)",
+      "review_status": "REVIEW_REQUIRED — awaiting human approval (cannot self-approve)",
+      "issues_closed": []
     }
   ],
   "agents": {
@@ -74,7 +82,10 @@
     "No dev-agent in swarm — P0/P1 bugs require EM to author fixes directly"
   ],
   "blockers": [
-    "PR #83 (P0 fixes): CI passing, review BLOCKED — GitHub prevents self-approval. Requires human review from @jpleva91 or a collaborator."
+    "PR #83 (P0 fixes): CI passing 5/5, review BLOCKED — GitHub prevents self-approval. Requires human review from @jpleva91 or a collaborator.",
+    "PR #84 (P1 docs fix): CI passing 5/5, review BLOCKED — same constraint.",
+    "PR #85 (EM state update): CI passing 5/5, review BLOCKED — same constraint.",
+    "PR budget AT LIMIT (3/3) — cannot open new fix PRs until at least one merges."
   ],
-  "notes": "Run 4 (2026-03-29T19:30Z): PR #83 CI passes (5/5) but blocked on REVIEW_REQUIRED — cannot self-approve. Flagged as blocker. EM authored and opened PR #84 to close P1 #74 (stale Crush comments). PR budget 2/3. P2 issues (#65, #66, #52, #53) labeled, unassigned — next dev-agent task batch. Dogfood run (#76) still blocked pending PR #83 merge. QA-agent active on #63 and #68."
+  "notes": "Run 5 (2026-03-29T20:00Z): No new issues since Run 4. All 3 open PRs now passing CI (5/5) but all blocked on REVIEW_REQUIRED — GitHub branch protection prevents self-approval. PR budget at limit (3/3). No new work can be opened. Dogfood run (#76) still blocked pending PR #83 merge. Human review of PRs #83, #84, #85 is the sole critical path item."
 }
