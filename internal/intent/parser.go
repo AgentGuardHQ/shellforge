@@ -347,18 +347,7 @@ func flattenParams(m map[string]any) map[string]string {
 		case string:
 			result[k] = val
 		case float64:
-			if val == float64(int(val)) {
-				result[k] = strings.TrimRight(strings.TrimRight(
-					strings.Replace(
-						strings.Replace(
-							fmt.Sprintf("%f", val), ".", "", 1),
-						"0", "", -1),
-					"0"), "")
-				// Simpler: just use Sprintf
-				result[k] = fmt.Sprintf("%g", val)
-			} else {
-				result[k] = fmt.Sprintf("%g", val)
-			}
+			result[k] = fmt.Sprintf("%g", val)
 		case bool:
 			result[k] = fmt.Sprintf("%t", val)
 		default:
