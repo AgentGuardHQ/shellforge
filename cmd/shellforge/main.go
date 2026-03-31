@@ -7,6 +7,7 @@ import (
 "encoding/json"
 "fmt"
 "io"
+"io/fs"
 "os"
 "os/exec"
 "path/filepath"
@@ -863,7 +864,13 @@ if _, err := os.Stat("agentguard.yaml"); err == nil {
 fmt.Println("  ✓ agentguard.yaml found")
 }
 entries, _ := filepath.Glob(filepath.Join(dir, "agents", "*.ts"))
-goEntries, _ := filepath.Glob(filepath.Join(dir, "internal", "**", "*.go"))
+var goEntries []string
+filepath.WalkDir(filepath.Join(dir, "internal"), func(p string, d fs.DirEntry, err error) error {
+if err == nil && !d.IsDir() && strings.HasSuffix(p, ".go") {
+goEntries = append(goEntries, p)
+}
+return nil
+})
 fmt.Printf("  Found %d TS agents, %d Go files\n", len(entries), len(goEntries))
 fmt.Println("  Install defenseclaw for full supply chain scanning")
 }
