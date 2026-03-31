@@ -221,13 +221,46 @@ func convertMessages(messages []Message) ([]anthropicMessage, error) {
 			}
 			result = append(result, anthropicMessage{Role: "user", Content: raw})
 
-		case "assistant", "user":
+		case "assistant":
+			if len(m.ToolCalls) > 0 {
+				// Assistant message with tool_use blocks — reconstruct structured content.
+				var blocks []anthropicContentBlock
+				if m.Content != "" {
+					blocks = append(blocks, anthropicContentBlock{Type: "text", Text: m.Content})
+				}
+				for _, tc := range m.ToolCalls {
+					input := make(map[string]any, len(tc.Params))
+					for k, v := range tc.Params {
+						input[k] = v
+					}
+					blocks = append(blocks, anthropicContentBlock{
+						Type:  "tool_use",
+						ID:    tc.ID,
+						Name:  tc.Name,
+						Input: input,
+					})
+				}
+				raw, err = json.Marshal(blocks)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, anthropicMessage{Role: "assistant", Content: raw})
+			} else {
+				// Plain text assistant message.
+				raw, err = json.Marshal(m.Content)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, anthropicMessage{Role: "assistant", Content: raw})
+			}
+
+		case "user":
 			// Plain text content block.
 			raw, err = json.Marshal(m.Content)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, anthropicMessage{Role: m.Role, Content: raw})
+			result = append(result, anthropicMessage{Role: "user", Content: raw})
 
 		default:
 			// Skip unknown roles (e.g. "system" already extracted).

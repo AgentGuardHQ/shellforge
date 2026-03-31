@@ -8,9 +8,10 @@ type Provider interface {
 
 // Message is a conversation turn.
 type Message struct {
-	Role       string // "system", "user", "assistant", "tool_result"
+	Role       string     // "system", "user", "assistant", "tool_result"
 	Content    string
-	ToolCallID string // set when Role == "tool_result"
+	ToolCallID string     // set when Role == "tool_result"
+	ToolCalls  []ToolCall // set on assistant messages that invoked tools
 }
 
 // ToolDef describes a tool the model can invoke.

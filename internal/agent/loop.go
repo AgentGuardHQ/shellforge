@@ -115,8 +115,13 @@ func runProviderLoop(cfg LoopConfig, engine *governance.Engine, start time.Time)
 
 		// ── Native tool-use path ──
 		if len(provResp.ToolCalls) > 0 {
-			// Append the assistant message (may contain text + tool_use blocks).
-			messages = append(messages, llm.Message{Role: "assistant", Content: provResp.Content})
+			// Append the assistant message with tool calls so the API receives
+			// structured tool_use blocks on the next turn.
+			messages = append(messages, llm.Message{
+				Role:      "assistant",
+				Content:   provResp.Content,
+				ToolCalls: provResp.ToolCalls,
+			})
 
 			for _, tc := range provResp.ToolCalls {
 				logger.Agent(cfg.Agent, fmt.Sprintf("tool_use: %s (id: %s)", tc.Name, tc.ID))
