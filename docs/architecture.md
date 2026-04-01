@@ -4,6 +4,41 @@
 
 ShellForge is a single Go binary (~7.5MB) that provides governed AI agent execution. Its core value is **governance** — every agent driver, whether a CLI tool, browser session, or local model, runs through AgentGuard policy enforcement on every action.
 
+## Entry Points
+
+ShellForge provides multiple entry points, all sharing the same agent loop and governance layer:
+
+| Entry Point | Mode | Context |
+|-------------|------|---------|
+| `shellforge chat` | Interactive REPL | Persistent — conversation history across prompts |
+| `shellforge agent "prompt"` | One-shot | Single task, single context window |
+| `shellforge ralph tasks.json` | Multi-task loop | Stateless-iterative — fresh context per task |
+| `shellforge run <driver>` | CLI driver | Governed subprocess (Goose, Claude Code, etc.) |
+| `shellforge serve agents.yaml` | Daemon | 24/7 swarm with memory-aware scheduling |
+
+### Interactive REPL (`chat`)
+
+Pair-programming mode. The user and model share a persistent conversation — the model remembers previous prompts and results within the session. Color output (green prompt, red errors, yellow governance denials). Shell escapes via `!command`. Ctrl+C interrupts the current agent run without killing the session.
+
+### Ralph Loop (`ralph`)
+
+Stateless-iterative execution for multi-task workloads. Each task gets a fresh context window to prevent accumulated confusion:
+
+```
+PICK task from queue → IMPLEMENT → VALIDATE (run tests) → COMMIT on success → RESET context → next
+```
+
+Tasks come from a JSON file or Octi Pulpo MCP dispatch. `--validate` runs a command (e.g., `go test ./...`) after each task. `--dry-run` previews without executing.
+
+### Sub-Agent Orchestrator
+
+The agent loop can spawn sub-agents for parallel work:
+
+- **SpawnSync** — block and wait for a sub-agent to complete
+- **SpawnAsync** — fire multiple sub-agents, collect results
+- Concurrency controlled via semaphore
+- Sub-agent results compressed to ~750 tokens before returning to parent
+
 ## Execution Model
 
 ShellForge supports three classes of agent driver, all governed uniformly:
@@ -110,7 +145,6 @@ Octi Pulpo routes tasks to the cheapest capable driver:
 | **Optimize** | [RTK](https://github.com/rtk-ai/rtk) | Token compression — 70-90% reduction on shell output |
 | **Execute** | [Goose](https://block.github.io/goose) / [OpenClaw](https://github.com/openclaw/openclaw) | Agent execution + browser automation |
 | **Coordinate** | [Octi Pulpo](https://github.com/AgentGuardHQ/octi-pulpo) | Budget-aware dispatch, episodic memory, model cascading |
-| **Coordinate** | [Octi Pulpo](https://github.com/AgentGuardHQ/octi-pulpo) | Swarm coordination via MCP |
 | **Govern** | [AgentGuard](https://github.com/AgentGuardHQ/agentguard) | Policy enforcement on every action |
 | **Sandbox** | [OpenShell](https://github.com/NVIDIA/OpenShell) | Kernel-level isolation (Docker on macOS) |
 | **Scan** | [DefenseClaw](https://github.com/cisco-ai-defense/defenseclaw) | Supply chain scanner — AI Bill of Materials |
@@ -120,6 +154,8 @@ Octi Pulpo routes tasks to the cheapest capable driver:
 ```
 cmd/shellforge/
 ├── main.go         # CLI entry point (cobra-style subcommands)
+├── chat.go         # Interactive REPL (`shellforge chat`)
+├── ralph.go        # Multi-task loop (`shellforge ralph`)
 └── status.go       # Ecosystem health check
 
 internal/
@@ -128,10 +164,13 @@ internal/
 │   └── anthropic.go# Anthropic API adapter (stdlib HTTP, prompt caching, tool_use)
 ├── agent/          # Agentic loop
 │   ├── loop.go     # runProviderLoop (Anthropic) + runOllamaLoop, drift detection wiring
-│   └── drift.go    # Drift detector — self-score every 5 calls, steer/kill on low scores
+│   ├── drift.go    # Drift detector — self-score every 5 calls, steer/kill on low scores
+│   └── repl.go     # Interactive REPL — persistent history, color output, shell escapes
+├── ralph/          # Ralph Loop — stateless-iterative multi-task execution
+│   └── loop.go     # PICK → IMPLEMENT → VALIDATE → COMMIT → RESET cycle
 ├── governance/     # agentguard.yaml parser + policy engine
 ├── ollama/         # Ollama HTTP client (chat, generate)
-├── tools/          # 5 tool implementations + RTK wrapper
+├── tools/          # 8 tool implementations (read/write/edit/glob/grep/shell/ls/find) + RTK wrapper
 ├── engine/         # Pluggable engine interface (Goose, OpenClaw, OpenCode)
 ├── logger/         # Structured JSON logging
 ├── scheduler/      # Memory-aware scheduling + cron
@@ -146,17 +185,19 @@ internal/
 
 ShellForge uses a pluggable engine system:
 
-1. **Goose** (preferred local driver) — subprocess, native Ollama support, SHELL wrapped via `govern-shell.sh`
-2. **OpenClaw** (browser + integrations) — browser automation, web app access, 100+ skills
-3. **NemoClaw** (enterprise) — OpenClaw + NVIDIA OpenShell sandbox + Nemotron local models
-4. **CLI Drivers** (cloud coding) — Claude Code, Codex, Copilot CLI, Gemini CLI
-5. **Native** (fallback) — built-in multi-turn loop with Ollama + tool calling
+1. **Native REPL** (`shellforge chat`) — interactive pair-programming, persistent history, 8 built-in tools
+2. **Native Agent** (`shellforge agent`) — one-shot autonomous execution with the same tool set
+3. **Ralph Loop** (`shellforge ralph`) — stateless-iterative multi-task with validation and auto-commit
+4. **Goose** (local driver) — subprocess, native Ollama support, SHELL wrapped via `govern-shell.sh`
+5. **OpenClaw** (browser + integrations) — browser automation, web app access, 100+ skills
+6. **NemoClaw** (enterprise) — OpenClaw + NVIDIA OpenShell sandbox + Nemotron local models
+7. **CLI Drivers** (cloud coding) — Claude Code, Codex, Copilot CLI, Gemini CLI
 
 ## Governance Flow
 
 ```
-User Request → Engine (Goose/OpenClaw/CLI/Native)
-  → Tool Call → Governance Check (agentguard.yaml)
+User Request → Entry Point (chat/agent/ralph/run/serve)
+  → Agent Loop → Tool Call → Governance Check (agentguard.yaml)
     → ALLOW → Execute Tool → Return Result
     → DENY  → Log Violation → Correction Feedback → Retry
 ```

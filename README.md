@@ -2,14 +2,14 @@
 
 # ShellForge
 
-**Governed AI agent runtime — one Go binary, local or cloud.**
+**Governed AI coding CLI and agent runtime — one Go binary, local or cloud.**
 
 [![Go](https://img.shields.io/badge/Go-1.18+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
 [![GitHub Pages](https://img.shields.io/badge/Live_Site-agentguardhq.github.io/shellforge-ff6b2b?style=for-the-badge)](https://agentguardhq.github.io/shellforge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![AgentGuard](https://img.shields.io/badge/Governed_by-AgentGuard-green?style=for-the-badge)](https://github.com/AgentGuardHQ/agentguard)
 
-*Run autonomous AI agents with policy enforcement on every tool call. Local via Ollama or cloud via Anthropic API — your choice.*
+*Interactive pair-programming with local models + autonomous multi-task execution — with governance on every tool call.*
 
 [Website](https://agentguardhq.github.io/shellforge) · [Docs](docs/architecture.md) · [Roadmap](docs/roadmap.md) · [AgentGuard](https://github.com/AgentGuardHQ/agentguard)
 
@@ -54,12 +54,17 @@ shellforge setup                 # creates agentguard.yaml + output dirs
 
 This creates `agentguard.yaml` (governance policy) in your project root. Edit it to customize which actions are allowed/denied.
 
-### 5. Run an agent
+### 5. Start a chat session
+
+```bash
+shellforge chat                     # interactive REPL — pair-program with a local model
+```
+
+Or run a one-shot agent:
 
 ```bash
 shellforge agent "describe what this project does"
 shellforge agent "find test gaps and suggest improvements"
-shellforge agent "create a hello world program"
 ```
 
 Every tool call (file reads, writes, shell commands) passes through governance before execution.
@@ -70,17 +75,55 @@ Every tool call (file reads, writes, shell commands) passes through governance b
 
 ## What Is ShellForge?
 
-ShellForge is a **governed agent runtime** — not an agent framework, not an orchestration layer, not a prompt wrapper.
+ShellForge is a **governed AI coding CLI and agent runtime** — like Claude Code or Cursor, but with local models and policy enforcement built in.
 
-It sits between any agent driver and the real world. The agent decides what it wants to do. ShellForge decides whether it's allowed.
+Two modes:
+
+1. **Interactive REPL** (`shellforge chat`) — pair-program with a local or cloud model. Persistent conversation history, shell escapes, color output.
+2. **Autonomous agents** (`shellforge agent`, `shellforge ralph`) — one-shot tasks or multi-task loops with automatic validation and commit.
+
+Both modes share the same governance layer. Every tool call passes through [AgentGuard](https://github.com/AgentGuardHQ/agentguard) policy enforcement before execution.
 
 ```
-Agent Driver (Goose, Claude Code, Copilot CLI)
-  → ShellForge Governance (allow / deny / correct)
-    → Your Environment (files, shell, git)
+You (chat) or Octi Pulpo (dispatch)
+  → ShellForge Agent Loop (tool calling, drift detection)
+    → AgentGuard Governance (allow / deny / correct)
+      → Your Environment (files, shell, git)
 ```
 
-**The core insight:** ShellForge's value is governance, not the agent loop. [Goose](https://block.github.io/goose) handles local agent execution. [Dagu](https://github.com/dagu-org/dagu) handles workflow orchestration. ShellForge wraps them all with [AgentGuard](https://github.com/AgentGuardHQ/agentguard) policy enforcement on every tool call.
+---
+
+## Interactive REPL (`shellforge chat`)
+
+Pair-programming mode. Persistent conversation history across prompts — the model remembers what you discussed.
+
+```bash
+shellforge chat                          # local model via Ollama (default)
+shellforge chat --provider anthropic     # Anthropic API (Haiku/Sonnet/Opus)
+shellforge chat --model qwen3:14b        # pick a specific model
+```
+
+Features:
+- **Color output** — green prompt, red errors, yellow governance denials
+- **Shell escapes** — `!git status` runs a command without leaving the session
+- **Ctrl+C** — interrupts the current agent run without killing the session
+- **Governance** — every tool call checked against `agentguard.yaml`, same as autonomous mode
+
+---
+
+## Ralph Loop (`shellforge ralph`)
+
+Stateless-iterative multi-task execution. Each task gets a fresh context window — no accumulated confusion across tasks.
+
+```bash
+shellforge ralph tasks.json                    # run tasks from a JSON file
+shellforge ralph --validate "go test ./..."    # validate after each task
+shellforge ralph --dry-run                     # preview without executing
+```
+
+The loop: **PICK** a task → **IMPLEMENT** it → **VALIDATE** (run tests) → **COMMIT** on success → **RESET** context → next task.
+
+Tasks come from a JSON file or Octi Pulpo MCP dispatch. Failed validations skip the commit and move on — no broken code lands.
 
 ---
 
@@ -112,8 +155,14 @@ shellforge status
 
 | Command | Description |
 |---------|-------------|
-| `shellforge agent "prompt"` | Run a governed agent (Ollama, default) |
-| `shellforge agent --provider anthropic "prompt"` | Run via Anthropic API (Haiku/Sonnet/Opus, prompt caching) |
+| `shellforge chat` | Interactive REPL — pair-program with a local or cloud model |
+| `shellforge chat --provider anthropic` | REPL via Anthropic API (Haiku/Sonnet/Opus) |
+| `shellforge chat --model qwen3:14b` | REPL with a specific Ollama model |
+| `shellforge ralph tasks.json` | Multi-task loop — stateless-iterative execution |
+| `shellforge ralph --validate "go test ./..."` | Ralph Loop with post-task validation |
+| `shellforge ralph --dry-run` | Preview tasks without executing |
+| `shellforge agent "prompt"` | One-shot governed agent (Ollama, default) |
+| `shellforge agent --provider anthropic "prompt"` | One-shot via Anthropic API (prompt caching) |
 | `shellforge agent --thinking-budget 8000 "prompt"` | Enable extended thinking (Sonnet/Opus) |
 | `shellforge run <driver> "prompt"` | Run a governed CLI driver (goose, claude, copilot, codex, gemini) |
 | `shellforge setup` | Install Ollama, create governance config, verify stack |
@@ -122,6 +171,23 @@ shellforge status
 | `shellforge serve agents.yaml` | Daemon mode — run a 24/7 agent swarm |
 | `shellforge status` | Show ecosystem health |
 | `shellforge version` | Print version |
+
+---
+
+## Built-in Tools
+
+The agent loop (used by `chat`, `agent`, and `ralph`) has 8 built-in tools, all governed:
+
+| Tool | What It Does |
+|------|-------------|
+| `read_file` | Read file contents |
+| `write_file` | Write a complete file |
+| `edit_file` | Targeted find-and-replace (like Claude Code's Edit tool) |
+| `glob` | Pattern-based file discovery with recursive `**` support |
+| `grep` | Regex content search with `file:line` output |
+| `run_shell` | Execute shell commands (via RTK for token compression) |
+| `list_directory` | List directory contents |
+| `search_files` | Search files by name pattern |
 
 ---
 
@@ -151,6 +217,12 @@ See `dags/multi-driver-swarm.yaml` and `dags/workspace-swarm.yaml` for examples.
 
 ```
 ┌───────────────────────────────────────────────────┐
+│  Entry Points                                      │
+│  chat (REPL) · agent (one-shot) · ralph (multi)   │
+│  run <driver> · serve (daemon)                     │
+└────────────────────┬──────────────────────────────┘
+                     │ prompt / task
+┌────────────────────▼──────────────────────────────┐
 │  Octi Pulpo (Coordination)                         │
 │  Budget-aware dispatch · Memory · Model cascading  │
 └────────────────────┬──────────────────────────────┘
@@ -158,6 +230,7 @@ See `dags/multi-driver-swarm.yaml` and `dags/workspace-swarm.yaml` for examples.
 ┌────────────────────▼──────────────────────────────┐
 │  ShellForge Agent Loop                             │
 │  LLM provider · Tool calling · Drift detection     │
+│  Sub-agent orchestrator (spawn sync/async)         │
 │  Anthropic API or Ollama                           │
 └────────────────────┬──────────────────────────────┘
                      │ tool call
@@ -171,6 +244,7 @@ See `dags/multi-driver-swarm.yaml` and `dags/workspace-swarm.yaml` for examples.
 ┌────────────────────▼──────────────────────────────┐
 │  Your Environment                                  │
 │  Files · Shell (RTK) · Git · Network               │
+│  8 tools: read/write/edit/glob/grep/shell/ls/find  │
 │  Sandboxed by OpenShell                            │
 └───────────────────────────────────────────────────┘
 ```
