@@ -40,7 +40,7 @@
 - [x] Fixed catch-all deny bug (bounded-execution policy was denying everything)
 - [x] Dagu DAG templates (sdlc-swarm, studio-swarm, workspace-swarm, multi-driver)
 
-### v0.7.0 — Anthropic API Provider ← CURRENT
+### v0.7.0 — Anthropic API Provider
 - [x] LLM provider interface (`llm.Provider`) — pluggable Ollama vs Anthropic backends
 - [x] Anthropic API adapter — stdlib HTTP, structured `tool_use` blocks, multi-turn history
 - [x] Prompt caching — `cache_control: ephemeral` on system + tools, ~90% savings on cached tokens
@@ -48,6 +48,21 @@
 - [x] Model cascading via Octi Pulpo (Haiku→Sonnet→Opus by `TaskComplexity` score)
 - [x] Drift detection — self-score every 5 tool calls, steer below 7, kill below 5 twice
 - [x] RTK token compression wired into `runShellWithRTK()` (70-90% savings on shell output)
+
+### v0.8.0 — UMAAL (Interactive REPL + Ralph Loop + Enhanced Tools)
+- [x] Interactive REPL (`shellforge chat`) — pair-programming with persistent conversation history
+- [x] Color output (green prompt, red errors, yellow governance denials)
+- [x] Shell escapes (`!command`) and Ctrl+C interrupt without session kill
+- [x] Ollama (local) and Anthropic API provider support in REPL
+- [x] Ralph Loop (`shellforge ralph`) — stateless-iterative multi-task execution
+- [x] PICK → IMPLEMENT → VALIDATE → COMMIT → RESET cycle
+- [x] Task input from JSON file or Octi Pulpo MCP dispatch
+- [x] `--validate` flag for post-task test commands, `--dry-run` for preview
+- [x] Sub-agent orchestrator — SpawnSync (block), SpawnAsync (fire and collect)
+- [x] Concurrency control via semaphore, context compression (~750 tokens)
+- [x] `edit_file` tool — targeted find-and-replace
+- [x] `glob` tool — pattern-based file discovery with recursive `**` support
+- [x] `grep` tool — regex content search with `file:line` output
 
 ---
 
@@ -142,17 +157,21 @@ Bugs identified during v0.6.x development. Fix before v1.0.
 
 ---
 
-## Stack (as of v0.6.1)
+## Stack (as of v0.8.0)
 
 | Component | Role | Status |
 |---|---|---|
+| `shellforge chat` | Interactive REPL | Working |
+| `shellforge ralph` | Multi-task loop | Working |
+| `shellforge agent` | One-shot agent | Working |
 | Goose (Block) | Local model driver | Working |
 | Claude Code | API driver (Linux) | Working (via hooks) |
 | Copilot CLI | API driver (Linux) | Working (via hooks) |
 | Codex CLI | API driver (Linux) | Coming soon |
 | Gemini CLI | API driver (Linux) | Coming soon |
 | Ollama | Local inference | Working |
+| Anthropic API | Cloud inference | Working (prompt caching) |
 | AgentGuard | Governance kernel | Working (YAML eval + Go kernel) |
-| Dagu | Orchestration | Working (DAGs + web UI) |
+| Octi Pulpo | Swarm coordination | Working (MCP) |
 | RTK | Token compression | Optional |
 | Docker | Sandbox | Optional |
