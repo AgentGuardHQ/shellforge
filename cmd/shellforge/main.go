@@ -67,6 +67,9 @@ case "agent":
 {
 providerName := ""
 thinkingBudget := 0
+modelFlag := ""
+baseURLFlag := ""
+apiKeyFlag := ""
 remaining := os.Args[2:]
 filtered := remaining[:0]
 for i := 0; i < len(remaining); i++ {
@@ -76,15 +79,24 @@ i++
 } else if remaining[i] == "--thinking-budget" && i+1 < len(remaining) {
 fmt.Sscanf(remaining[i+1], "%d", &thinkingBudget)
 i++
+} else if remaining[i] == "--model" && i+1 < len(remaining) {
+modelFlag = remaining[i+1]
+i++
+} else if remaining[i] == "--base-url" && i+1 < len(remaining) {
+baseURLFlag = remaining[i+1]
+i++
+} else if remaining[i] == "--api-key" && i+1 < len(remaining) {
+apiKeyFlag = remaining[i+1]
+i++
 } else {
 filtered = append(filtered, remaining[i])
 }
 }
 if len(filtered) == 0 {
-fmt.Fprintln(os.Stderr, "Usage: shellforge agent [--provider <name>] [--thinking-budget <tokens>] \"your prompt\"")
+fmt.Fprintln(os.Stderr, "Usage: shellforge agent [--provider <name>] [--thinking-budget <tokens>] [--model <model>] [--base-url <url>] [--api-key <key>] \"your prompt\"")
 os.Exit(1)
 }
-cmdAgent(strings.Join(filtered, " "), providerName, thinkingBudget)
+cmdAgent(strings.Join(filtered, " "), providerName, thinkingBudget, modelFlag, baseURLFlag, apiKeyFlag)
 }
 case "chat":
 cmdChat()
@@ -683,7 +695,7 @@ printResult("report-agent", result)
 saveReport("outputs/reports", "report", result)
 }
 
-func cmdAgent(prompt, providerName string, thinkingBudget int) {
+func cmdAgent(prompt, providerName string, thinkingBudget int, modelFlag, baseURLFlag, apiKeyFlag string) {
 engine := mustGovernance()
 
 var provider llm.Provider
@@ -706,6 +718,34 @@ fmt.Fprintf(os.Stderr, "Using Anthropic API (model: %s, thinking budget: %d toke
 fmt.Fprintf(os.Stderr, "Using Anthropic API (model: %s)\n", model)
 }
 provider = p
+case "openai":
+apiKey := os.Getenv("DEEPSEEK_API_KEY")
+if apiKey == "" {
+apiKey = os.Getenv("OPENAI_API_KEY")
+}
+if apiKeyFlag != "" {
+apiKey = apiKeyFlag
+}
+if apiKey == "" {
+fmt.Fprintln(os.Stderr, "Error: DEEPSEEK_API_KEY or OPENAI_API_KEY environment variable not set")
+os.Exit(1)
+}
+baseURL := os.Getenv("OPENAI_BASE_URL")
+if baseURL == "" {
+baseURL = "https://api.deepseek.com/v1"
+}
+if baseURLFlag != "" {
+baseURL = baseURLFlag
+}
+model := os.Getenv("OPENAI_MODEL")
+if model == "" {
+model = "deepseek-coder"
+}
+if modelFlag != "" {
+model = modelFlag
+}
+provider = llm.NewOpenAIProvider(apiKey, baseURL, model)
+fmt.Fprintf(os.Stderr, "Using OpenAI-compatible API (base: %s, model: %s)\n", baseURL, model)
 default:
 // Legacy Ollama path
 mustOllama()
