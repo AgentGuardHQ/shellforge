@@ -1,15 +1,15 @@
 {
   "squad": "shellforge",
-  "updated_at": "2026-03-31T06:05:00Z",
+  "updated_at": "2026-04-02T16:30:00Z",
   "sprint": {
     "goal": "P2 bug sweep + dogfood readiness — #52 (Glob **), #65 (silent WriteFile), #76 (dogfood run)",
-    "focus": "Run 10: Fixed #65 (scheduler WriteFile error) in PR #95. Closed stale PR #91 (merge conflict). PR queue at 3/3 — human review needed to unblock.",
+    "focus": "Run 16 (Sr-agent): Fixed #76 (remote Ollama + dogfood readiness) — setup remote OLLAMA_HOST prompt, Goose on headless servers, mustOllama remote error msg, inference:remote in ServeConfig, version sentinel 'dev'. 5 new tests. Committed to fix/dogfood-remote-ollama-76 (commit 6a20c4d). Push blocked as always.",
     "status": "active"
   },
   "pr_budget": {
     "max_open": 3,
-    "current_open": 3,
-    "status": "at_limit"
+    "current_open": 1,
+    "status": "ok"
   },
   "loop_guard": {
     "retry_loop_detected": false,
@@ -19,17 +19,9 @@
     "p0": [],
     "p1": [],
     "p2": [
-      { "number": 76, "title": "Dogfood: run ShellForge swarm on jared box via RunPod GPU", "assignee": "em", "notes": "4th escalation. All governance P0/P1 bugs fixed. Blocked on human trigger." },
-      { "number": 92, "title": "Bundle Preflight protocol in Goose agent bootstrap", "assignee": null, "notes": "Blocked on Preflight v1 ship." },
-      { "number": 65, "title": "bug: scheduler.go silently ignores os.WriteFile error", "assignee": "em", "notes": "FIXED — PR #95 open, CI pending" },
-      { "number": 52, "title": "bug: filepath.Glob with ** in cmdScan never matches any Go files", "assignee": "em", "notes": "Next fix when budget clears" },
-      { "number": 53, "title": "docs/readme: README still shows ./shellforge commands", "assignee": null },
-      { "number": 51, "title": "bug: run() helper silently ignores errors", "assignee": "em", "notes": "FIXED — PR #93 open, CI green, REVIEW_REQUIRED" },
-      { "number": 50, "title": "bug: kernel version comparison is lexicographic, not numeric", "assignee": null },
-      { "number": 49, "title": "bug: InferenceQueue is not priority-aware", "assignee": null },
-      { "number": 26, "title": "bug: run-qa-agent.sh doesn't build binary if missing", "assignee": null },
-      { "number": 25, "title": "bug: agent RunResult.Success heuristic incorrect", "assignee": null },
-      { "number": 24, "title": "bug: listFiles() returns paths relative to cwd", "assignee": null }
+      { "number": 76, "title": "Dogfood: run ShellForge swarm on jared box via RunPod GPU", "assignee": "sr-agent", "notes": "DONE: remote Ollama support added — setup prompts for OLLAMA_HOST, Goose offered on headless servers, mustOllama remote-aware error, inference:remote in ServeConfig, version='dev'. Committed to fix/dogfood-remote-ollama-76 (commit 6a20c4d). Push blocked (GITHUB_TOKEN read-only)." },
+      { "number": 92, "title": "Bundle Preflight protocol in Goose agent bootstrap", "assignee": "sr-agent", "notes": "DONE: internal/preflight package (go:embed), InjectGooseHints, 4 tests. Committed to feat/preflight-goose-bootstrap-92 (commit 561bd25). Push blocked (GITHUB_TOKEN read-only). Needs human push + PR." },
+      { "number": 49, "title": "bug: InferenceQueue is not priority-aware", "assignee": "sr-agent", "notes": "DONE: heap-based fix committed to fix/inference-queue-priority-49. Push blocked (GITHUB_TOKEN read-only, no SSH key). Needs human push + PR." }
     ],
     "p3": [
       { "number": 81, "title": "feat: OpenClaw as governed execution runtime", "assignee": null },
@@ -46,65 +38,93 @@
   },
   "pr_queue": [
     {
-      "number": 93,
-      "title": "fix(main): log errors from run() helper — closes #51",
-      "status": "open",
-      "ci": "green (5/5)",
-      "review_status": "REVIEW_REQUIRED",
-      "merge_state": "BLOCKED",
-      "issues_closed": [51]
-    },
-    {
-      "number": 94,
-      "title": "chore(squad): EM state update — run 9 (2026-03-31)",
-      "status": "open",
-      "ci": "green (5/5)",
-      "review_status": "REVIEW_REQUIRED",
-      "merge_state": "BLOCKED",
-      "issues_closed": []
-    },
-    {
-      "number": 95,
-      "title": "fix(scheduler): log WriteFile error + EM state run 10 — closes #65",
+      "number": 102,
+      "title": "fix(tools): list_files returns paths relative to queried directory — closes #24",
       "status": "open",
       "ci": "pending",
       "review_status": "REVIEW_REQUIRED",
-      "issues_closed": [65]
+      "issues_closed": [24]
     }
   ],
-  "closed_this_run": [
-    { "number": 91, "merged": false, "reason": "Stale — superseded by PR #94, had merge conflict (DIRTY). Closed by EM run 10." }
+  "local_branches_ready_to_push": [
+    {
+      "branch": "fix/dogfood-remote-ollama-76",
+      "worktree": "shellforge-sr-76",
+      "issues_closed": [76],
+      "title": "fix(setup): remote Ollama support + dogfood readiness — closes #76",
+      "status": "committed — push blocked (GITHUB_TOKEN read-only)",
+      "commit": "6a20c4d",
+      "tests": "5 new scheduler tests (inference field parsing, New() remote behavior)"
+    },
+    {
+      "branch": "fix/run-scripts-missing-binary",
+      "worktree": "shellforge-fix-26",
+      "issues_closed": [26],
+      "title": "fix(scripts): auto-build binary if missing in run-qa-agent.sh and run-report-agent.sh",
+      "status": "committed — push blocked (GITHUB_TOKEN read-only)"
+    },
+    {
+      "branch": "fix/setup-kernel-version-comparison",
+      "worktree": "shellforge-fix-50",
+      "issues_closed": [50],
+      "title": "fix(setup): numeric kernel version comparison for Landlock >= 5.13",
+      "status": "committed — push blocked (GITHUB_TOKEN read-only)"
+    },
+    {
+      "branch": "fix/inference-queue-priority-49",
+      "worktree": "shellforge-fix-49",
+      "issues_closed": [49],
+      "title": "fix(scheduler): priority-aware InferenceQueue via container/heap — closes #49",
+      "status": "committed — push blocked (GITHUB_TOKEN read-only)",
+      "commit": "55b853a",
+      "tests": "7 new tests (priority ordering, FIFO tie-breaking, concurrency cap, queue-full, ctx cancel, release, MaxParallel)"
+    },
+    {
+      "branch": "feat/preflight-goose-bootstrap-92",
+      "worktree": "shellforge-feat-92",
+      "issues_closed": [92],
+      "title": "feat(preflight): inject Preflight protocol into Goose agent bootstrap — closes #92",
+      "status": "committed — push blocked (GITHUB_TOKEN read-only)",
+      "commit": "561bd25",
+      "tests": "4 new tests (empty dir, skip-if-present, prepend-to-existing, idempotency)"
+    }
   ],
   "recently_merged": [
-    { "number": 89, "merged": true, "issues_closed": [68, 66], "date": "2026-03-31", "notes": "25 tests — normalizer, governance, intent" },
-    { "number": 88, "merged": true, "issues_closed": [63], "date": "2026-03-30", "notes": "P1 classifyShellRisk word-boundary fix" },
-    { "number": 87, "merged": true, "issues_closed": [], "date": "2026-03-30", "notes": "EM state run 6" },
-    { "number": 86, "merged": true, "issues_closed": [28], "date": "2026-03-30", "notes": "P1 timeout override fix" },
-    { "number": 83, "merged": true, "issues_closed": [58, 62, 67, 69, 75], "date": "2026-03-30" },
-    { "number": 84, "merged": true, "issues_closed": [74], "date": "2026-03-30" }
+    { "number": 101, "merged": true, "issues_closed": [], "date": "2026-04-01", "notes": "docs: REPL, Ralph Loop, enhanced tools" },
+    { "number": 100, "merged": true, "issues_closed": [], "date": "2026-04-01", "notes": "feat: Interactive REPL + enhanced tools (edit, glob, grep)" },
+    { "number": 99, "merged": true, "issues_closed": [], "date": "2026-04-01", "notes": "docs: Octi Pulpo replaces Dagu" },
+    { "number": 97, "merged": true, "issues_closed": [], "date": "2026-04-01", "notes": "feat: Ralph Loop + orchestrator + v0.7.0 docs" },
+    { "number": 96, "merged": true, "issues_closed": [52], "date": "2026-04-01", "notes": "fix(cmdScan): WalkDir replaces filepath.Glob **" },
+    { "number": 95, "merged": true, "issues_closed": [65], "date": "2026-03-31", "notes": "fix(scheduler): log WriteFile error" },
+    { "number": 93, "merged": true, "issues_closed": [51], "date": "2026-03-31", "notes": "fix(main): log errors from run() helper" }
   ],
   "agents": {
-    "qa-agent": { "status": "idle", "schedule": "4h", "last_pr": 89, "notes": "PR #89 merged — idle until next assignment" },
+    "sr-agent": { "status": "active", "schedule": "4h", "last_pr": 102, "notes": "Run 16 (2026-04-02): Fixed #76 — remote Ollama support + dogfood readiness. setup: remote OLLAMA_HOST prompt, Goose offered on headless servers. serve: mustOllama remote-aware error message. scheduler: inference:remote field skips RAM detection (default 4 slots). version sentinel changed to 'dev'. 5 new tests. 89 total pass. 5 branches now ready to push. GitHub push still blocked — GITHUB_TOKEN read-only." },
+    "qa-agent": { "status": "idle", "schedule": "4h", "last_pr": 89, "notes": "Run 13 (2026-04-02): Build/vet clean, 120+ tests passing, no regressions. PR #102 reviewed — strong test coverage. Added 15 tests (logger, integration) to branch qa/test-coverage-correction-scheduler. Push blocked (GitHub auth expired)." },
     "report-agent": { "status": "idle", "schedule": "30m", "last_issue": null },
     "security-scanner": { "status": "idle", "schedule": "12h", "last_issue": 75 },
     "slack-notifier": { "status": "disabled", "schedule": "8h", "last_issue": null }
   },
   "capability_gaps": [
-    "No dev-agent in swarm — P2 bugs require EM to author fixes directly",
+    "No dev-agent in swarm — P2 bugs require Sr/EM to author fixes directly",
     "PR review turnaround > 24h causing queue saturation at budget limit",
     "setup.sh needs remote Ollama support (OLLAMA_HOST) before dogfood on headless/GPU-remote boxes"
   ],
   "blockers": [
-    "PR #93 (fix #51): CI green (5/5) — REVIEW REQUIRED. One-line fix.",
-    "PR #94 (EM state run 9): CI green (5/5) — REVIEW REQUIRED. State update only.",
-    "PR #95 (fix #65): CI pending — REVIEW REQUIRED. Governance-critical audit log fix.",
-    "Dogfood (#76): 4th escalation — all governance P0/P1 fixed, needs human to trigger."
+    "GITHUB_TOKEN is read-only — cannot push branches or create PRs. 4 branches ready. Run: gh auth login with write scope.",
+    "PR #102 (fix #24): CI pending — REVIEW REQUIRED. listFiles relative path fix + 5 tests.",
+    "Dogfood (#76): 5th escalation — all governance P0/P1 fixed, needs human to trigger."
   ],
   "human_escalations": [
-    { "priority": "P1", "title": "Review PR #93 — fix run() silent errors (closes #51, CI green)", "url": "https://github.com/AgentGuardHQ/shellforge/pull/93" },
-    { "priority": "P1", "title": "Review PR #94 — EM state run 9 (CI green, state update only)", "url": "https://github.com/AgentGuardHQ/shellforge/pull/94" },
-    { "priority": "P2", "title": "Review PR #95 — fix scheduler WriteFile error (closes #65, governance audit)", "url": "https://github.com/AgentGuardHQ/shellforge/pull/95" },
-    { "priority": "P2", "title": "Trigger dogfood run (#76) — 4th escalation, all blockers resolved", "url": "https://github.com/AgentGuardHQ/shellforge/issues/76" }
+    { "priority": "P0", "title": "Grant GitHub push access — GITHUB_TOKEN is read-only, blocks all 5 pending branches", "url": null },
+    { "priority": "P2", "title": "Push + PR: fix/dogfood-remote-ollama-76 → closes #76 (worktree: shellforge-sr-76, commit: 6a20c4d)", "url": null },
+    { "priority": "P2", "title": "Push + PR: feat/preflight-goose-bootstrap-92 → closes #92 (worktree: shellforge-feat-92, commit: 561bd25)", "url": null },
+    { "priority": "P2", "title": "Push + PR: fix/inference-queue-priority-49 → closes #49 (worktree: shellforge-fix-49, commit: 55b853a)", "url": null },
+    { "priority": "P2", "title": "Push + PR: fix/run-scripts-missing-binary → closes #26 (worktree: shellforge-fix-26)", "url": null },
+    { "priority": "P2", "title": "Push + PR: fix/setup-kernel-version-comparison → closes #50 (worktree: shellforge-fix-50)", "url": null },
+    { "priority": "P2", "title": "Review PR #102 — fix list_files relative paths (closes #24, CI pending)", "url": "https://github.com/AgentGuardHQ/shellforge/pull/102" },
+    { "priority": "P2", "title": "Close issue #25 — RunResult.Success already fixed in provider loops", "url": "https://github.com/AgentGuardHQ/shellforge/issues/25" },
+    { "priority": "P2", "title": "Trigger dogfood run (#76) — 5th escalation, all blockers resolved", "url": "https://github.com/AgentGuardHQ/shellforge/issues/76" }
   ],
-  "notes": "Run 10 (2026-03-31): Closed stale PR #91 (DIRTY merge conflict, superseded by #94). Fixed #65 (scheduler.go os.WriteFile error discarded) in PR #95. PR budget now 3/3 — at limit. Queue blocked on human review of #93 and #94 (both CI green). Next priority: #52 (filepath.WalkDir fix) when budget clears."
+  "notes": "Run 16 (2026-04-02, Sr-agent): Fixed #76 — dogfood readiness for headless Linux + remote GPU deployment. setup: adds Remote Ollama path when isServer=true (prompts for OLLAMA_HOST, verifies connectivity, prints export tip). Goose now offered on all platforms (removed !isServer guard — Goose works headlessly). mustOllama(): remote hosts get a meaningful error message rather than 'run ollama serve'. scheduler.ServeConfig: new inference field; inference=remote skips RAM-based DetectMaxParallel and defaults max_parallel=4 (GPU-bound). agents.yaml: inference:remote documented as a comment. version sentinel changed from stale '0.4.8' to 'dev' (goreleaser ldflags still inject real version). 5 new scheduler tests. 89 total pass. 5 branches pending push. GitHub push blocked run-over-run."
 }
