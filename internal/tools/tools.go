@@ -198,7 +198,11 @@ if err != nil {
 return nil
 }
 name := d.Name()
-if name == "node_modules" || name == ".git" || strings.HasPrefix(name, ".") {
+// Skip special directories and hidden files
+if name == "." || name == ".." {
+return nil
+}
+if name == "node_modules" || name == ".git" || (strings.HasPrefix(name, ".") && name != ".") {
 if d.IsDir() {
 return filepath.SkipDir
 }
@@ -210,7 +214,14 @@ return fmt.Errorf("limit reached")
 if ext != "" && filepath.Ext(name) != ext {
 return nil
 }
-rel, _ := filepath.Rel(".", path)
+rel, err := filepath.Rel(dir, path)
+if err != nil {
+return nil
+}
+// Skip the root directory itself
+if rel == "." {
+return nil
+}
 if d.IsDir() {
 files = append(files, rel+"/")
 } else {

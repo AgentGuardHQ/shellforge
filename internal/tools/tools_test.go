@@ -473,3 +473,163 @@ func TestExecuteDirect_Grep(t *testing.T) {
 		t.Fatalf("expected match, got: %s", r.Output)
 	}
 }
+
+// ── list_files tests ──
+
+func TestListFiles_RelativeToDirectory(t *testing.T) {
+	dir := t.TempDir()
+	
+	// Create a nested directory structure
+	subDir := filepath.Join(dir, "subdir")
+	deepDir := filepath.Join(subDir, "deep")
+	os.MkdirAll(deepDir, 0o755)
+	
+	// Create files at different levels
+	os.WriteFile(filepath.Join(dir, "root.txt"), []byte("root"), 0o644)
+	os.WriteFile(filepath.Join(subDir, "sub.txt"), []byte("sub"), 0o644)
+	os.WriteFile(filepath.Join(deepDir, "deep.txt"), []byte("deep"), 0o644)
+	
+	// Test 1: List files from root directory
+	t.Run("root directory", func(t *testing.T) {
+		r := ExecuteDirect("list_files", map[string]string{"directory": dir}, 0)
+		if !r.Success {
+			t.Fatalf("expected success, got error: %s", r.Error)
+		}
+		
+		lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+		expected := []string{"root.txt", "subdir/", "subdir/deep/", "subdir/deep/deep.txt", "subdir/sub.txt"}
+		
+		if len(lines) != len(expected) {
+			t.Fatalf("expected %d files, got %d: %v", len(expected), len(lines), lines)
+		}
+		
+		// Check that paths are relative to dir, not cwd
+		for _, line := range lines {
+			if strings.Contains(line, dir) {
+				t.Errorf("path %q should not contain absolute path %q", line, dir)
+			}
+			if strings.HasPrefix(line, filepath.Base(dir)) {
+				t.Errorf("path %q should not be prefixed with directory name", line)
+			}
+		}
+	})
+	
+	// Test 2: List files from subdirectory
+	t.Run("subdirectory", func(t *testing.T) {
+		r := ExecuteDirect("list_files", map[string]string{"directory": subDir}, 0)
+		if !r.Success {
+			t.Fatalf("expected success, got error: %s", r.Error)
+		}
+		
+		lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+		expected := []string{"deep/", "deep/deep.txt", "sub.txt"}
+		
+		if len(lines) != len(expected) {
+			t.Fatalf("expected %d files, got %d: %v", len(expected), len(lines), lines)
+		}
+		
+		// Check that paths are relative to subDir, not cwd
+		for _, line := range lines {
+			if strings.Contains(line, "subdir") {
+				t.Errorf("path %q should not contain 'subdir' prefix", line)
+			}
+			if strings.HasPrefix(line, "../") {
+				t.Errorf("path %q should not have parent directory prefix", line)
+			}
+		}
+	})
+	
+	// Test 3: List files from deep subdirectory
+	t.Run("deep subdirectory", func(t *testing.T) {
+		r := ExecuteDirect("list_files", map[string]string{"directory": deepDir}, 0)
+		if !r.Success {
+			t.Fatalf("expected success, got error: %s", r.Error)
+		}
+		
+		lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+		if len(lines) != 1 || lines[0] != "deep.txt" {
+			t.Fatalf("expected ['deep.txt'], got %v", lines)
+		}
+	})
+}
+
+func TestListFiles_ExtensionFilter(t *testing.T) {
+	dir := t.TempDir()
+	
+	os.WriteFile(filepath.Join(dir, "a.go"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.txt"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "c.go"), []byte(""), 0o644)
+	
+	// Test with .go extension filter
+	r := ExecuteDirect("list_files", map[string]string{
+		"directory": dir,
+		"extension": ".go",
+	}, 0)
+	
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+	
+	lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 .go files, got %d: %s", len(lines), r.Output)
+	}
+	
+	for _, line := range lines {
+		if !strings.HasSuffix(line, ".go") {
+			t.Errorf("expected .go file, got %q", line)
+		}
+	}
+}
+
+func TestListFiles_HiddenAndSpecialDirsExcluded(t *testing.T) {
+	dir := t.TempDir()
+	
+	// Create various files and directories
+	os.WriteFile(filepath.Join(dir, "normal.txt"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, ".hidden.txt"), []byte(""), 0o644)
+	os.MkdirAll(filepath.Join(dir, ".git"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".git", "config"), []byte(""), 0o644)
+	os.MkdirAll(filepath.Join(dir, "node_modules"), 0o755)
+	os.WriteFile(filepath.Join(dir, "node_modules", "pkg.js"), []byte(""), 0o644)
+	os.MkdirAll(filepath.Join(dir, ".hidden_dir"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".hidden_dir", "file.txt"), []byte(""), 0o644)
+	
+	r := ExecuteDirect("list_files", map[string]string{"directory": dir}, 0)
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+	
+	lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+	
+	// Should only have normal.txt
+	if len(lines) != 1 || lines[0] != "normal.txt" {
+		t.Fatalf("expected only 'normal.txt', got %v", lines)
+	}
+}
+
+func TestListFiles_CurrentDirectory(t *testing.T) {
+	dir := t.TempDir()
+	
+	// Save original directory and change to test dir
+	originalDir, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(originalDir)
+	
+	os.WriteFile("file1.txt", []byte(""), 0o644)
+	os.WriteFile("file2.go", []byte(""), 0o644)
+	os.MkdirAll("subdir", 0o755)
+	os.WriteFile(filepath.Join("subdir", "file3.txt"), []byte(""), 0o644)
+	
+	// Test listing current directory
+	r := ExecuteDirect("list_files", map[string]string{"directory": "."}, 0)
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+	
+	lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+	expectedCount := 4 // file1.txt, file2.go, subdir/, subdir/file3.txt
+	if len(lines) != expectedCount {
+		t.Fatalf("expected %d files, got %d: %v", expectedCount, len(lines), lines)
+	}
+}
