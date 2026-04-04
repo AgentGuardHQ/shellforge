@@ -172,6 +172,139 @@ func TestEditFile_EmptyNewText(t *testing.T) {
 	}
 }
 
+// ── list_files tests ──
+
+func TestListFiles_Basic(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.go"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.go"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "c.txt"), []byte(""), 0o644)
+
+	r := listFiles(map[string]string{
+		"directory": dir,
+	}, 0)
+
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+
+	lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 files, got %d: %s", len(lines), r.Output)
+	}
+}
+
+func TestListFiles_WithExtensionFilter(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.go"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.go"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, "c.txt"), []byte(""), 0o644)
+
+	r := listFiles(map[string]string{
+		"directory": dir,
+		"extension": ".go",
+	}, 0)
+
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+
+	lines := strings.Split(strings.TrimSpace(r.Output), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 .go files, got %d: %s", len(lines), r.Output)
+	}
+}
+
+func TestListFiles_EmptyDirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	r := listFiles(map[string]string{
+		"directory": dir,
+	}, 0)
+
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+	if r.Output != "(empty directory)" {
+		t.Fatalf("expected '(empty directory)', got %q", r.Output)
+	}
+}
+
+func TestListFiles_RelativeToDirectoryNotCwd(t *testing.T) {
+	// This test verifies the fix for issue #24
+	// listFiles() should return paths relative to the listed directory, not cwd
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "subdir")
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(dir, "root.txt"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(sub, "nested.txt"), []byte(""), 0o644)
+
+	// Change to a different directory to test the bug fix
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	
+	// Change to parent directory of test dir
+	parentDir := filepath.Dir(dir)
+	os.Chdir(parentDir)
+
+	r := listFiles(map[string]string{
+		"directory": dir,
+	}, 0)
+
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+
+	output := strings.TrimSpace(r.Output)
+	lines := strings.Split(output, "\n")
+	
+	// Should get paths relative to 'dir', not relative to parentDir
+	expectedPaths := []string{"root.txt", "subdir/", "subdir/nested.txt"}
+	if len(lines) != len(expectedPaths) {
+		t.Fatalf("expected %d files, got %d: %s", len(expectedPaths), len(lines), output)
+	}
+
+	// Check that paths are relative to the listed directory
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "root.txt") && !strings.HasPrefix(line, "subdir") {
+			t.Errorf("path %q should be relative to listed directory, not cwd", line)
+		}
+	}
+}
+
+func TestListFiles_SkipsHiddenAndSpecialDirs(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "visible.txt"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(dir, ".hidden.txt"), []byte(""), 0o644)
+	
+	gitDir := filepath.Join(dir, ".git")
+	os.MkdirAll(gitDir, 0o755)
+	os.WriteFile(filepath.Join(gitDir, "config"), []byte(""), 0o644)
+	
+	nodeModulesDir := filepath.Join(dir, "node_modules")
+	os.MkdirAll(nodeModulesDir, 0o755)
+	os.WriteFile(filepath.Join(nodeModulesDir, "package.json"), []byte(""), 0o644)
+
+	r := listFiles(map[string]string{
+		"directory": dir,
+	}, 0)
+
+	if !r.Success {
+		t.Fatalf("expected success, got error: %s", r.Error)
+	}
+
+	output := strings.TrimSpace(r.Output)
+	if strings.Contains(output, ".hidden.txt") {
+		t.Errorf("should not include hidden files, got: %s", output)
+	}
+	if strings.Contains(output, ".git") {
+		t.Errorf("should not include .git directory, got: %s", output)
+	}
+	if strings.Contains(output, "node_modules") {
+		t.Errorf("should not include node_modules directory, got: %s", output)
+	}
+}
+
 // ── glob tests ──
 
 func TestGlob_SimplePattern(t *testing.T) {
