@@ -473,3 +473,106 @@ func TestExecuteDirect_Grep(t *testing.T) {
 		t.Fatalf("expected match, got: %s", r.Output)
 	}
 }
+
+// ── list_files tests ──
+
+func TestListFiles_RelativeToDirectory(t *testing.T) {
+	// Create a test directory structure
+	tmpDir := t.TempDir()
+	
+	// Create some files and subdirectories
+	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test"), 0644)
+	os.MkdirAll(filepath.Join(tmpDir, "subdir"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "subdir", "file2.txt"), []byte("test"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "subdir", "file3.go"), []byte("test"), 0644)
+	
+	// Change to a different directory to test that paths are relative to dir, not cwd
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalDir)
+	
+	// Change to /tmp (or another directory)
+	os.Chdir("/tmp")
+	
+	// Test 1: List all files
+	result := listFiles(map[string]string{"directory": tmpDir}, 0)
+	if !result.Success {
+		t.Fatalf("Expected success, got error: %s", result.Error)
+	}
+	
+	output := result.Output
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	
+	// Check that we get the expected files
+	expectedFiles := []string{"file1.txt", "subdir/", "subdir/file2.txt", "subdir/file3.go"}
+	if len(lines) != len(expectedFiles) {
+		t.Errorf("Expected %d files, got %d: %v", len(expectedFiles), len(lines), lines)
+	}
+	
+	// Check that paths are relative to tmpDir, not cwd
+	for _, line := range lines {
+		if strings.Contains(line, "/tmp") {
+			t.Errorf("Path should not contain absolute path /tmp: %s", line)
+		}
+		if strings.HasPrefix(line, "/") {
+			t.Errorf("Path should not be absolute: %s", line)
+		}
+	}
+	
+	// Test 2: Filter by extension
+	result2 := listFiles(map[string]string{"directory": tmpDir, "extension": ".go"}, 0)
+	if !result2.Success {
+		t.Fatalf("Expected success, got error: %s", result2.Error)
+	}
+	
+	output2 := result2.Output
+	lines2 := strings.Split(strings.TrimSpace(output2), "\n")
+	if len(lines2) != 1 || !strings.Contains(lines2[0], "file3.go") {
+		t.Errorf("Expected only file3.go, got: %v", lines2)
+	}
+	
+	// Test 3: Empty directory
+	emptyDir := t.TempDir()
+	result3 := listFiles(map[string]string{"directory": emptyDir}, 0)
+	if !result3.Success {
+		t.Fatalf("Expected success, got error: %s", result3.Error)
+	}
+	if result3.Output != "(empty directory)" {
+		t.Errorf("Expected '(empty directory)', got: %s", result3.Output)
+	}
+}
+
+func TestListFiles_CurrentDirectory(t *testing.T) {
+	// Test with "." as directory
+	tmpDir := t.TempDir()
+	
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalDir)
+	
+	os.Chdir(tmpDir)
+	
+	// Create a file in the current directory
+	testFile := filepath.Join(tmpDir, "testfile.txt")
+	os.WriteFile(testFile, []byte("test"), 0644)
+	
+	// Debug: check if file exists
+	if _, err := os.Stat(testFile); err != nil {
+		t.Fatalf("Test file doesn't exist: %v", err)
+	}
+	
+	result := listFiles(map[string]string{"directory": "."}, 0)
+	if !result.Success {
+		t.Fatalf("Expected success, got error: %s", result.Error)
+	}
+	
+	t.Logf("Output: %q", result.Output)
+	
+	if !strings.Contains(result.Output, "testfile.txt") {
+		t.Errorf("Expected to find testfile.txt, got: %s", result.Output)
+	}
+}
