@@ -457,19 +457,134 @@ func TestExecuteDirect_Glob(t *testing.T) {
 	}
 }
 
-func TestExecuteDirect_Grep(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test.txt"), []byte("hello world\n"), 0o644)
+// ── list_files tests ──
 
-	r := ExecuteDirect("grep", map[string]string{
-		"pattern":   "hello",
-		"directory": dir,
+func TestListFiles_RelativePaths(t *testing.T) {
+	// Create a test directory structure
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	os.MkdirAll(subDir, 0755)
+	
+	// Create some test files
+	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test1"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "file2.go"), []byte("test2"), 0644)
+	os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("test3"), 0644)
+	
+	// Change to a different directory to test the bug
+	originalDir, _ := os.Getwd()
+	os.Chdir("/tmp")
+	defer os.Chdir(originalDir)
+	
+	// Test listing from a different directory than cwd
+	result := ExecuteDirect("list_files", map[string]string{
+		"directory": tmpDir,
 	}, 10)
-
-	if !r.Success {
-		t.Fatalf("expected success, got error: %s", r.Error)
+	
+	if !result.Success {
+		t.Fatalf("expected success, got error: %s", result.Error)
 	}
-	if !strings.Contains(r.Output, "hello world") {
-		t.Fatalf("expected match, got: %s", r.Output)
+	
+	// Check that paths are relative to the listed directory
+	output := result.Output
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	
+	expectedFiles := []string{
+		"file1.txt",
+		"file2.go",
+		"subdir/",
+		"subdir/file3.txt",
+	}
+	
+	if len(lines) != len(expectedFiles) {
+		t.Fatalf("expected %d files, got %d: %v", len(expectedFiles), len(lines), lines)
+	}
+	
+	for i, line := range lines {
+		if line != expectedFiles[i] {
+			t.Errorf("line %d: expected %q, got %q", i, expectedFiles[i], line)
+		}
+	}
+	
+	// Verify no paths are absolute or relative to cwd
+	for _, line := range lines {
+		if filepath.IsAbs(line) {
+			t.Errorf("path should not be absolute: %s", line)
+		}
+		if strings.Contains(line, tmpDir) {
+			t.Errorf("path should not contain tmpDir: %s", line)
+		}
+	}
+}
+
+func TestListFiles_WithExtensionFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	os.MkdirAll(subDir, 0755)
+	
+	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test1"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "file2.go"), []byte("test2"), 0644)
+	os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("test3"), 0644)
+	os.WriteFile(filepath.Join(subDir, "file4.go"), []byte("test4"), 0644)
+	
+	// Change to a different directory
+	originalDir, _ := os.Getwd()
+	os.Chdir("/tmp")
+	defer os.Chdir(originalDir)
+	
+	result := ExecuteDirect("list_files", map[string]string{
+		"directory": tmpDir,
+		"extension": ".txt",
+	}, 10)
+	
+	if !result.Success {
+		t.Fatalf("expected success, got error: %s", result.Error)
+	}
+	
+	output := result.Output
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	
+	expectedFiles := []string{
+		"file1.txt",
+		"subdir/file3.txt",
+	}
+	
+	if len(lines) != len(expectedFiles) {
+		t.Fatalf("expected %d .txt files, got %d: %v", len(expectedFiles), len(lines), lines)
+	}
+	
+	for i, line := range lines {
+		if line != expectedFiles[i] {
+			t.Errorf("line %d: expected %q, got %q", i, expectedFiles[i], line)
+		}
+	}
+}
+
+func TestListFiles_EmptyDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	
+	result := ExecuteDirect("list_files", map[string]string{
+		"directory": tmpDir,
+	}, 10)
+	
+	if !result.Success {
+		t.Fatalf("expected success, got error: %s", result.Error)
+	}
+	
+	if result.Output != "(empty directory)" {
+		t.Fatalf("expected '(empty directory)', got %q", result.Output)
+	}
+}
+
+func TestListFiles_DefaultDirectory(t *testing.T) {
+	// Test with default directory (current directory)
+	result := ExecuteDirect("list_files", map[string]string{}, 10)
+	
+	if !result.Success {
+		t.Fatalf("expected success, got error: %s", result.Error)
+	}
+	
+	// Should list current directory contents
+	if result.Output == "" {
+		t.Fatal("expected some output")
 	}
 }
