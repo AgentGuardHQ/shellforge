@@ -155,9 +155,26 @@ model := ""
 // ── Step 1: Ollama (skip on headless server) ──
 steps++
 if isServer {
-fmt.Printf("── Step %d/%d: Ollama (skipped — server mode) ──\n", steps, total)
-fmt.Println("  Detected: Linux, no GPU — skipping local model setup")
-fmt.Println("  Use CLI drivers instead: shellforge run claude, copilot, codex, gemini")
+fmt.Printf("── Step %d/%d: Ollama (server mode) ──\n", steps, total)
+fmt.Println("  Detected: Linux, no GPU — remote Ollama configuration")
+fmt.Println()
+fmt.Print("  Configure remote Ollama (OLLAMA_HOST) for GPU endpoint? [Y/n] ")
+if confirm(reader) {
+fmt.Print("  Enter OLLAMA_HOST (e.g., http://192.168.1.100:11434): ")
+ollamaHost := readLine(reader)
+if ollamaHost != "" {
+fmt.Printf("  → Set OLLAMA_HOST=%s before running shellforge\n", ollamaHost)
+fmt.Println("  ✓ Remote Ollama configured")
+} else {
+fmt.Println("  ⚠ No OLLAMA_HOST set — will use default (localhost:11434)")
+}
+} else {
+fmt.Println("  Skipped remote Ollama configuration")
+}
+fmt.Println("  Note: Use CLI drivers for API-based inference:")
+fmt.Println("    shellforge run claude \"review open PRs\"")
+fmt.Println("    shellforge run copilot \"update docs\"")
+fmt.Println("    shellforge run codex \"generate tests\"")
 fmt.Println()
 } else {
 fmt.Printf("── Step %d/%d: Ollama (local LLM inference) ──\n", steps, total)
@@ -300,10 +317,12 @@ fmt.Println()
 steps++
 fmt.Printf("── Step %d/%d: Agent drivers ──\n", steps, total)
 
-// On Mac/GPU: offer Goose (local models via Ollama). On server: skip, show API drivers.
-if !isServer {
+// Offer Goose for both local and remote Ollama (works with OLLAMA_HOST)
 if _, err := exec.LookPath("goose"); err != nil {
 fmt.Println("  Goose — AI agent with native Ollama support (actually executes tools)")
+if isServer {
+fmt.Println("  Note: Works with remote Ollama via OLLAMA_HOST environment variable")
+}
 fmt.Print("  Install Goose? [Y/n] ")
 if confirm(reader) {
 fmt.Println("  → Installing Goose...")
@@ -314,11 +333,18 @@ run("sh", "-c", "curl -fsSL https://github.com/block/goose/releases/download/sta
 }
 if _, err := exec.LookPath("goose"); err == nil {
 fmt.Println("  ✓ Goose installed")
+if isServer {
+fmt.Println("  → Run 'goose configure' and set OLLAMA_HOST for remote GPU endpoint")
+} else {
 fmt.Println("  → Run 'goose configure' to set up Ollama provider")
+}
 } else {
 fmt.Println("  ⚠ Install failed — try: brew install --cask block-goose")
 }
 }
+} else {
+if isServer {
+fmt.Println("  ✓ Goose installed (works with remote Ollama via OLLAMA_HOST)")
 } else {
 fmt.Println("  ✓ Goose installed (local model driver)")
 }
@@ -397,7 +423,9 @@ fmt.Println("║     Setup Complete                   ║")
 fmt.Println("╚══════════════════════════════════════╝")
 fmt.Println()
 if isServer {
-fmt.Println("  Server mode — use CLI drivers:")
+fmt.Println("  Server mode — remote Ollama configuration available")
+fmt.Println("    Set OLLAMA_HOST for remote GPU endpoint")
+fmt.Println("    shellforge run goose \"describe this project\" (works with OLLAMA_HOST)")
 fmt.Println("    shellforge run claude \"review open PRs\"")
 fmt.Println("    shellforge run copilot \"update docs\"")
 fmt.Println("    shellforge run codex \"generate tests\"")
